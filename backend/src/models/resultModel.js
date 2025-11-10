@@ -1,15 +1,18 @@
-
 const mongoose = require('mongoose');
 
-const answerSchema = mongoose.Schema(
+const answerSchema = new mongoose.Schema(
   {
-    questionId: {
+    question: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Question',
       required: true,
     },
     selectedOption: {
-      type: Number, // Index of the selected option
+      type: Number,
+    },
+    optionOrder: {
+      type: [Number],
+      default: [],
     },
     isCorrect: {
       type: Boolean,
@@ -18,37 +21,52 @@ const answerSchema = mongoose.Schema(
   { _id: false }
 );
 
-const resultSchema = mongoose.Schema(
+const resultSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    quizId: {
+    exam: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Quiz',
+      ref: 'Exam',
       required: true,
     },
-    answers: [answerSchema],
+    answers: {
+      type: [answerSchema],
+      default: [],
+    },
+    score: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
-      required: true,
-      enum: ['In Progress', 'Completed'],
+      enum: ['In Progress', 'Completed', 'Suspended'],
       default: 'In Progress',
     },
     startTime: {
+      type: Date,
+      default: Date.now,
+    },
+    endTime: {
       type: Date,
     },
     submittedAt: {
       type: Date,
     },
+    tabSwitchCount: { type: Number, default: 0 },
+    blurCount: { type: Number, default: 0 },
+    focusCount: { type: Number, default: 0 },
+    copyPasteAttempts: { type: Number, default: 0 },
+    lastActivityAt: { type: Date, default: Date.now },
+    forcedSubmit: { type: Boolean, default: false },
+    multiLoginDetected: { type: Boolean, default: false },
   },
   {
     timestamps: true,
   }
 );
 
-const Result = mongoose.model('Result', resultSchema);
-
-module.exports = Result;
+module.exports = mongoose.model('Result', resultSchema);

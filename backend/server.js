@@ -27,6 +27,8 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/results', resultRoutes); // Use result routes
 app.use('/api/groups', groupRoutes); // Use group routes
+app.use('/api/monitor', require('./src/routes/monitorRoutes')); // Anti-cheat & monitoring
+app.use('/api/bulk', require('./src/routes/bulkRoutes')); // Bulk uploads
 
 const PORT = process.env.PORT || 5000;
 

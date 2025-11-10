@@ -15,28 +15,27 @@ const Header = () => {
 
   return (
     <header>
-      <Navbar bg="dark" variant="dark" expand="lg" collapseOnSelect>
+      <Navbar expand="lg" collapseOnSelect className="navbar-glass">
         <Container>
           <LinkContainer to="/">
-            <Navbar.Brand>ExamPro</Navbar.Brand>
+            <Navbar.Brand className="brand-gradient fw-bold">ExamPro</Navbar.Brand>
           </LinkContainer>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+            <Nav className="ms-auto align-items-lg-center gap-2">
+              <LinkContainer to="/">
+                <Nav.Link>Home</Nav.Link>
+              </LinkContainer>
               {userInfo ? (
                 <NavDropdown title={userInfo.name} id="username">
                   <LinkContainer to="/profile">
                     <NavDropdown.Item>Profile</NavDropdown.Item>
                   </LinkContainer>
-                  <NavDropdown.Item onClick={logoutHandler}>
-                    Logout
-                  </NavDropdown.Item>
+                  <NavDropdown.Item onClick={logoutHandler}>Logout</NavDropdown.Item>
                 </NavDropdown>
               ) : (
                 <LinkContainer to="/login">
-                  <Nav.Link>
-                    <i className="fas fa-user"></i> Sign In
-                  </Nav.Link>
+                  <Nav.Link className="btn btn-sm btn-gradient text-white px-3">Sign In</Nav.Link>
                 </LinkContainer>
               )}
               {(userInfo && (userInfo.role === 'Super Admin' || userInfo.role === 'Moderator')) && (
@@ -52,6 +51,12 @@ const Header = () => {
                   </LinkContainer>
                   <LinkContainer to="/admin/examlist">
                     <NavDropdown.Item>Exams</NavDropdown.Item>
+                  </LinkContainer>
+                  <LinkContainer to="/admin/monitoring">
+                    <NavDropdown.Item>Monitoring</NavDropdown.Item>
+                  </LinkContainer>
+                  <LinkContainer to="/admin/bulk">
+                    <NavDropdown.Item>Bulk Upload</NavDropdown.Item>
                   </LinkContainer>
                 </NavDropdown>
               )}

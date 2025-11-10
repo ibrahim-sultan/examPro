@@ -1,16 +1,13 @@
 
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 
 const Footer = () => {
   return (
-    <footer>
-      <Container>
-        <Row>
-          <Col className="text-center py-3">
-            Copyright &copy; ExamPro
-          </Col>
-        </Row>
+    <footer className="footer-glass">
+      <Container className="d-flex justify-content-between align-items-center py-3">
+        <div className="brand-gradient fw-bold">ExamPro</div>
+        <div className="muted small">© {new Date().getFullYear()} All rights reserved</div>
       </Container>
     </footer>
   );
