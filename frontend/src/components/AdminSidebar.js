@@ -1,7 +1,17 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logout } from '../store/slices/userSlice';
 
 const AdminSidebar = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const onLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
+
   return (
     <aside className="admin-sidebar">
       <div className="admin-sidebar__brand">Admin</div>
@@ -14,6 +24,9 @@ const AdminSidebar = () => {
         <NavLink to="/admin/monitoring" className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Monitoring</NavLink>
         <NavLink to="/admin/bulk" className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Bulk Upload</NavLink>
       </nav>
+      <div className="admin-sidebar__footer">
+        <button type="button" className="admin-logout" onClick={onLogout}>Logout</button>
+      </div>
     </aside>
   );
 };
