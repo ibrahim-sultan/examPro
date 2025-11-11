@@ -23,6 +23,8 @@ import ResultScreen from './screens/ResultScreen';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import PageTransition from './components/PageTransition';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -42,19 +44,22 @@ const AppRoutes = () => {
             <Route path="/results/:id" element={<ResultScreen />} />
           </Route>
 
-          {/* Admin Routes */}
+          {/* Admin Routes (wrapped in AdminLayout) */}
           <Route path="" element={<AdminRoute />}>
-            <Route path="/admin/userlist" element={<UserListScreen />} />
-            <Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
-            <Route path="/admin/grouplist" element={<GroupListScreen />} />
-            <Route path="/admin/group/:id/edit" element={<GroupEditScreen />} />
-            <Route path="/admin/examlist" element={<ExamListScreen />} />
-            <Route path="/admin/exam/:id/edit" element={<ExamEditScreen />} />
-            <Route path="/admin/questionlist" element={<QuestionListScreen />} />
-            <Route path="/admin/question/create" element={<QuestionEditScreen />} />
-            <Route path="/admin/question/:id/edit" element={<QuestionEditScreen />} />
-            <Route path="/admin/monitoring" element={<MonitoringScreen />} />
-            <Route path="/admin/bulk" element={<BulkUploadScreen />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<AdminDashboardScreen />} />
+              <Route path="/admin/userlist" element={<UserListScreen />} />
+              <Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
+              <Route path="/admin/grouplist" element={<GroupListScreen />} />
+              <Route path="/admin/group/:id/edit" element={<GroupEditScreen />} />
+              <Route path="/admin/examlist" element={<ExamListScreen />} />
+              <Route path="/admin/exam/:id/edit" element={<ExamEditScreen />} />
+              <Route path="/admin/questionlist" element={<QuestionListScreen />} />
+              <Route path="/admin/question/create" element={<QuestionEditScreen />} />
+              <Route path="/admin/question/:id/edit" element={<QuestionEditScreen />} />
+              <Route path="/admin/monitoring" element={<MonitoringScreen />} />
+              <Route path="/admin/bulk" element={<BulkUploadScreen />} />
+            </Route>
           </Route>
         </Routes>
       </PageTransition>
@@ -62,14 +67,24 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => {
+const AppShell = () => {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
   return (
-    <Router>
-      <Header />
+    <>
+      {!isAdminPath && <Header />}
       <main className="py-3">
         <AppRoutes />
       </main>
       <Footer />
+    </>
+  );
+};
+
+const App = () => {
+  return (
+    <Router>
+      <AppShell />
     </Router>
   );
 };

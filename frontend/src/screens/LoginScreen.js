@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Form, Button } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
@@ -17,7 +17,17 @@ const LoginScreen = () => {
   const { loading, error, userInfo } = useSelector((state) => state.user);
   const redirect = location.search ? location.search.split('=')[1] : '/';
 
-  useEffect(() => { if (userInfo) navigate(redirect); }, [navigate, userInfo, redirect]);
+  useEffect(() => {
+    if (userInfo) {
+      // If admin, go to admin dashboard; else go to redirect/default
+      const adminRoles = ['Admin', 'Super Admin', 'Moderator'];
+      if (userInfo.role && adminRoles.includes(userInfo.role)) {
+        navigate('/admin');
+      } else {
+        navigate(redirect);
+      }
+    }
+  }, [navigate, userInfo, redirect]);
 
   const submitHandler = (e) => {
     e.preventDefault();
@@ -57,16 +67,10 @@ const LoginScreen = () => {
               required
             />
           </Form.Group>
-          <div className="muted small mb-3">
-            <Link to="/forgot">Forgot password?</Link>
-          </div>
           <motion.div whileTap={{ scale: 0.98 }}>
             <Button type="submit" className="btn-gradient w-100">Sign In</Button>
           </motion.div>
         </Form>
-        <div className="muted mt-3 text-center">
-          New here? <Link to={redirect ? `/register?redirect=${redirect}` : '/register'}>Create an account</Link>
-        </div>
       </motion.div>
     </div>
   );
