@@ -15,7 +15,7 @@ export const listExams = createAsyncThunk(
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      const { data } = await axios.get('/api/exams', config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/exams`, config);
       return data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -36,7 +36,7 @@ export const listAvailableExams = createAsyncThunk(
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      const { data } = await axios.get('/api/exams/available', config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/exams/available`, config);
       return data;
     } catch (error) {
       return rejectWithValue(error.response.data);

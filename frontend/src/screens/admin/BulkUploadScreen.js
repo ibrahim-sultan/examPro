@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Row, Col, Card, Button, Form } from 'react-bootstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+import API_BASE_URL from '../../config/api';
 
 const BulkUploadScreen = () => {
   const { userInfo } = useSelector((s) => s.user);

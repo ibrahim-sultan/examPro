@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Button, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+import API_BASE_URL from '../../config/api';
 
 const MonitoringScreen = () => {
   const { userInfo } = useSelector((s) => s.user);
