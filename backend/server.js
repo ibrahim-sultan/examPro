@@ -1,6 +1,7 @@
 
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
@@ -17,8 +18,22 @@ connectDB();
 
 const app = express();
 
+// CORS (allow frontend to call the API when hosted on a different origin)
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : '*',
+    credentials: false,
+  })
+);
+
 // Body parser
 app.use(express.json());
+
+// Simple health/root route
+app.get('/', (req, res) => {
+  res.send('API is running');
+});
 
 // Mount routers
 app.use('/api/auth', authRoutes);
@@ -34,5 +49,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(
   PORT,
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`)
+  () => console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`)
 );
