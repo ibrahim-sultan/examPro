@@ -22,7 +22,8 @@ const QuestionListScreen = () => {
 
   useEffect(() => {
     dispatch(resetQuestionState());
-    if (userInfo && (userInfo.role === 'Super Admin' || userInfo.role === 'Moderator')) {
+    const adminRoles = ['Admin', 'Super Admin', 'Moderator'];
+    if (userInfo && userInfo.role && adminRoles.includes(userInfo.role)) {
       dispatch(listQuestions());
     } else {
       navigate('/login');

@@ -16,7 +16,8 @@ const GroupListScreen = () => {
   const { userInfo } = useSelector((state) => state.user);
 
   useEffect(() => {
-    if (userInfo && userInfo.isAdmin) {
+    const adminRoles = ['Admin', 'Super Admin', 'Moderator'];
+    if (userInfo && userInfo.role && adminRoles.includes(userInfo.role)) {
       dispatch(listGroups());
     } else {
       navigate('/login');

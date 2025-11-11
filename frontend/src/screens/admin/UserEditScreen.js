@@ -27,7 +27,8 @@ const UserEditScreen = () => {
   } = userUpdate || {};
 
   useEffect(() => {
-    if (!userInfo || !userInfo.isAdmin) {
+    const adminRoles = ['Admin', 'Super Admin', 'Moderator'];
+    if (!userInfo || !userInfo.role || !adminRoles.includes(userInfo.role)) {
       navigate('/login');
       return;
     }

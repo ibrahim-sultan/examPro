@@ -15,7 +15,7 @@ const LoginScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { loading, error, userInfo } = useSelector((state) => state.user);
-  const redirect = location.search ? location.search.split('=')[1] : '/';
+  const redirect = location.search ? location.search.split('=')[1] : '/dashboard';
 
   useEffect(() => {
     if (userInfo) {

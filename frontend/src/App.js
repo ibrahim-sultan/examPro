@@ -7,8 +7,9 @@ import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import UserListScreen from './screens/UserListScreen';
-import UserEditScreen from './screens/UserEditScreen';
+import UserListScreen from './screens/admin/UserListScreen';
+import UserEditScreen from './screens/admin/UserEditScreen';
+import StudentDashboardScreen from './screens/StudentDashboardScreen';
 import GroupListScreen from './screens/admin/GroupListScreen';
 import GroupEditScreen from './screens/admin/GroupEditScreen';
 import ExamListScreen from './screens/admin/ExamListScreen';
@@ -32,13 +33,15 @@ const AppRoutes = () => {
     <Container>
       <PageTransition routeKey={location.pathname}>
         <Routes location={location} key={location.pathname}>
+          {/* Redirect root to login */}
+          <Route path="/" element={<LoginScreen />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/register" element={<RegisterScreen />} />
-          <Route path="/" element={<HomeScreen />} />
           <Route path="/exam/:id" element={<ExamDetailsScreen />} />
 
           {/* Private Routes */}
           <Route path="" element={<PrivateRoute />}>
+            <Route path="/dashboard" element={<StudentDashboardScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
             <Route path="/exam/:id/take" element={<ExamTakeScreen />} />
             <Route path="/results/:id" element={<ResultScreen />} />
