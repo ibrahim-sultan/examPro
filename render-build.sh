@@ -1,15 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 echo "==> Installing backend dependencies..."
-cd backend
-npm ci || npm install
+npm --prefix backend ci || npm --prefix backend install
 
 echo "==> Installing frontend dependencies..."
-cd ../frontend
-npm ci || npm install
+npm --prefix frontend ci || npm --prefix frontend install
 
 echo "==> Building frontend..."
-npm run build
+npm --prefix frontend run build
 
 echo "==> Build complete!"
