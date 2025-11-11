@@ -3,8 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Card, Col, ListGroup, Row, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+import API_BASE_URL from '../config/api';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
 import Timer from '../components/Timer';
