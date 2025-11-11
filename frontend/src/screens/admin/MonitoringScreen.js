@@ -3,6 +3,8 @@ import { Row, Col, Card, Table, Button, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 const MonitoringScreen = () => {
   const { userInfo } = useSelector((s) => s.user);
   const [examId, setExamId] = useState('');
@@ -13,7 +15,7 @@ const MonitoringScreen = () => {
   const fetchSessions = async () => {
     try {
       setLoading(true); setError('');
-      const { data } = await axios.get(`/api/monitor/ongoing${examId ? `?examId=${examId}` : ''}`,
+      const { data } = await axios.get(`${API_BASE_URL}/api/monitor/ongoing${examId ? `?examId=${examId}` : ''}`,
         { headers: { Authorization: `Bearer ${userInfo?.token}` } });
       setSessions(data);
     } catch (e) {
@@ -68,8 +70,8 @@ const MonitoringScreen = () => {
                       <td><Badge bg="warning" text="dark">{s.copyPasteAttempts || 0}</Badge></td>
                       <td>{s.status}</td>
                       <td className="d-flex gap-2">
-                        <Button size="sm" variant="outline-danger" onClick={() => act(`/api/monitor/force-submit/${s._id}`)}>Force Submit</Button>
-                        <Button size="sm" variant="outline-warning" onClick={() => act(`/api/monitor/suspend/${s._id}`)}>Suspend</Button>
+                        <Button size="sm" variant="outline-danger" onClick={() => act(`${API_BASE_URL}/api/monitor/force-submit/${s._id}`)}>Force Submit</Button>
+                        <Button size="sm" variant="outline-warning" onClick={() => act(`${API_BASE_URL}/api/monitor/suspend/${s._id}`)}>Suspend</Button>
                       </td>
                     </tr>
                   ))}

@@ -35,7 +35,7 @@ export const listGroups = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.get('/api/groups', config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/groups`, config);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -63,7 +63,7 @@ export const createGroup = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.post('/api/groups', group, config);
+      const { data } = await axios.post(`${API_BASE_URL}/api/groups`, group, config);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -90,7 +90,7 @@ export const getGroupDetails = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.get(`/api/groups/${id}`, config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/groups/${id}`, config);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -119,7 +119,7 @@ export const updateGroup = createAsyncThunk(
       };
 
       const { data } = await axios.put(
-        `/api/groups/${group._id}`,
+        `${API_BASE_URL}/api/groups/${group._id}`,
         group,
         config
       );
@@ -149,7 +149,7 @@ export const deleteGroup = createAsyncThunk(
         },
       };
 
-      await axios.delete(`/api/groups/${id}`, config);
+      await axios.delete(`${API_BASE_URL}/api/groups/${id}`, config);
       return id;
     } catch (error) {
       return rejectWithValue(
@@ -178,7 +178,7 @@ export const addMemberToGroup = createAsyncThunk(
       };
 
       const { data } = await axios.post(
-        `/api/groups/${groupId}/members`,
+        `${API_BASE_URL}/api/groups/${groupId}/members`,
         { userId },
         config
       );
@@ -209,7 +209,7 @@ export const removeMemberFromGroup = createAsyncThunk(
       };
 
       const { data } = await axios.delete(
-        `/api/groups/${groupId}/members/${userId}`,
+        `${API_BASE_URL}/api/groups/${groupId}/members/${userId}`,
         config
       );
       return data;

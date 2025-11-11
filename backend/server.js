@@ -2,6 +2,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
@@ -30,7 +31,12 @@ app.use(
 // Body parser
 app.use(express.json());
 
-// Simple health/root route
+// Health check for Render
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Simple root route (useful in development)
 app.get('/', (req, res) => {
   res.send('API is running');
 });
@@ -44,6 +50,18 @@ app.use('/api/results', resultRoutes); // Use result routes
 app.use('/api/groups', groupRoutes); // Use group routes
 app.use('/api/monitor', require('./src/routes/monitorRoutes')); // Anti-cheat & monitoring
 app.use('/api/bulk', require('./src/routes/bulkRoutes')); // Bulk uploads
+
+// Serve frontend build in production from ../frontend/build
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = path.join(__dirname, '..', 'frontend', 'build');
+  app.use(express.static(buildPath));
+
+  // For any non-API route, serve index.html (SPA)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 

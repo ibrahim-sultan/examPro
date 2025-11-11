@@ -37,7 +37,7 @@ export const listUsers = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.get('/api/users', config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/users`, config);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -65,7 +65,7 @@ export const createUser = createAsyncThunk(
         },
       };
 
-      await axios.post('/api/users', userData, config);
+      await axios.post(`${API_BASE_URL}/api/users`, userData, config);
     } catch (error) {
       return rejectWithValue(
         error.response && error.response.data.message
@@ -91,7 +91,7 @@ export const getUserDetails = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.get(`/api/users/${id}`, config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/users/${id}`, config);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -120,7 +120,7 @@ export const updateUser = createAsyncThunk(
       };
 
       const { data } = await axios.put(
-        `/api/users/${userData._id}`,
+        `${API_BASE_URL}/api/users/${userData._id}`,
         userData,
         config
       );
@@ -150,7 +150,7 @@ export const deleteUser = createAsyncThunk(
         },
       };
 
-      await axios.delete(`/api/users/${id}`, config);
+      await axios.delete(`${API_BASE_URL}/api/users/${id}`, config);
     } catch (error) {
       return rejectWithValue(
         error.response && error.response.data.message

@@ -56,7 +56,7 @@ export const getExamDetails = createAsyncThunk(
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      const { data } = await axios.get(`/api/exams/${id}`, config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/exams/${id}`, config);
       return data;
     } catch (error) {
       const message =

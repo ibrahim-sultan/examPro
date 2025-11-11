@@ -1,7 +1,8 @@
 
 import axios from 'axios';
 
-const API_URL = '/api/questions/';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_URL = `${API_BASE_URL}/api/questions/`;
 
 // Get all questions
 const listQuestions = async (token) => {

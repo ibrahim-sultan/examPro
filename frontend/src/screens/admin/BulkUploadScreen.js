@@ -3,6 +3,8 @@ import { Row, Col, Card, Button, Form } from 'react-bootstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 const BulkUploadScreen = () => {
   const { userInfo } = useSelector((s) => s.user);
   const [qFile, setQFile] = useState(null);
@@ -19,8 +21,8 @@ const BulkUploadScreen = () => {
     e.preventDefault();
     setMsg('');
     try {
-      if (qFile) await upload('/api/bulk/questions', qFile);
-      if (sFile) await upload('/api/bulk/students', sFile);
+      if (qFile) await upload(`${API_BASE_URL}/api/bulk/questions`, qFile);
+      if (sFile) await upload(`${API_BASE_URL}/api/bulk/students`, sFile);
       setMsg('Upload successful');
     } catch {
       setMsg('Upload failed');

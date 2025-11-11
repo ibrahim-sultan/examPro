@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Card, Col, ListGroup, Row, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
 import Timer from '../components/Timer';
@@ -33,7 +35,7 @@ const ExamTakeScreen = () => {
     try {
       if (!activeResult?._id) return;
       await axios.post(
-        '/api/monitor/events',
+        `${API_BASE_URL}/api/monitor/events`,
         { resultId: activeResult._id, type },
         { headers: { Authorization: `Bearer ${userInfo?.token}` } }
       );

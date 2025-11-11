@@ -183,7 +183,7 @@ export const deleteUser = createAsyncThunk(
         },
       };
 
-      await axios.delete(`/api/users/${id}`, config);
+      await axios.delete(`${API_BASE_URL}/api/users/${id}`, config);
       return id; // Return id on success
     } catch (error) {
       return rejectWithValue(

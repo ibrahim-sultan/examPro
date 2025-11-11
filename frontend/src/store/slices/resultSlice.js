@@ -18,7 +18,7 @@ export const startExam = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.post(`/api/results/start/${examId}`, {}, config);
+      const { data } = await axios.post(`${API_BASE_URL}/api/results/start/${examId}`, {}, config);
       return data;
     } catch (error) {
       const message =
@@ -46,7 +46,7 @@ export const submitExam = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.post(`/api/results/submit/${resultId}`, { answers }, config);
+      const { data } = await axios.post(`${API_BASE_URL}/api/results/submit/${resultId}`, { answers }, config);
       return data;
     } catch (error) {
       const message =
@@ -73,7 +73,7 @@ export const getResultDetails = createAsyncThunk(
         },
       };
 
-      const { data } = await axios.get(`/api/results/${id}`, config);
+      const { data } = await axios.get(`${API_BASE_URL}/api/results/${id}`, config);
       return data;
     } catch (error) {
       const message =
