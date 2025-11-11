@@ -57,7 +57,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(buildPath));
 
   // For any non-API route, serve index.html (SPA)
-  app.get('*', (req, res, next) => {
+  app.get('/*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(buildPath, 'index.html'));
   });
