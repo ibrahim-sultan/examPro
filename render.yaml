@@ -16,6 +16,8 @@ services:
         value: production
       - key: NODE_VERSION
         value: 20
+      - key: REACT_APP_API_URL
+        value: https://exampro-ysox.onrender.com
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
