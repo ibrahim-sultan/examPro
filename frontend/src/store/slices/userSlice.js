@@ -1,6 +1,7 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 
 // Assuming login, register, getUserDetails, updateUserProfile thunks are here.
 // We will add the new thunks below them.

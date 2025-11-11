@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 
 // Async thunk for listing all exams (for admins)
 export const listExams = createAsyncThunk(

@@ -1,6 +1,7 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 
 // Thunk to start an exam
 export const startExam = createAsyncThunk(
