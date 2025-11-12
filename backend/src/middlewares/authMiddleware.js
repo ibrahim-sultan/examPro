@@ -1,6 +1,7 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel.js');
+const Student = require('../models/studentModel');
 
 const protect = async (req, res, next) => {
   let token;
@@ -16,9 +17,16 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from the token
-      req.user = await User.findById(decoded.id).select('-password');
-
+      // Get user from the token (user or student)
+      let u = await User.findById(decoded.id).select('-password');
+      if (!u) {
+        u = await Student.findById(decoded.id).select('-password');
+      }
+      if (!u) {
+        res.status(401);
+        throw new Error('Not authorized, user not found');
+      }
+      req.user = u;
       next();
     } catch (error) {
       console.error(error);

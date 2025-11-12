@@ -1,6 +1,7 @@
 
 const generateToken = require('../utils/generateToken');
 const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
@@ -9,15 +10,24 @@ const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    let account = await User.findOne({ email });
+    let role = null;
+    if (account && (await account.matchPassword(password))) {
+      role = account.role;
+    } else {
+      account = await Student.findOne({ email });
+      if (account && (await account.matchPassword(password))) {
+        role = 'Student';
+      }
+    }
 
-    if (user && (await user.matchPassword(password))) {
+    if (account && role) {
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        role,
+        token: generateToken(account._id),
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });

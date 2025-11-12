@@ -1,6 +1,8 @@
 const XLSX = require('xlsx');
 const multer = require('multer');
+const bcrypt = require('bcryptjs');
 const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 const Question = require('../models/questionModel');
 
 const storage = multer.memoryStorage();
@@ -39,27 +41,32 @@ exports.uploadQuestions = async (req, res) => {
   }
 };
 
-// Expect columns: name, email, password, role (Student|Moderator|Super Admin), isActive
+// Expect columns: name, email, password, isActive
 exports.uploadStudents = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const rows = readRows(req.file.buffer);
-    const ops = rows.map((r) => ({
-      updateOne: {
-        filter: { email: r.email },
-        update: {
-          $setOnInsert: {
-            name: r.name,
-            email: r.email,
-            password: r.password || 'ChangeMe123!',
-            role: r.role || 'Student',
-            isActive: r.isActive !== undefined ? !!r.isActive : true,
+    const ops = [];
+    for (const r of rows) {
+      const plain = r.password || 'ChangeMe123!';
+      const hashed = await bcrypt.hash(String(plain), 10);
+      ops.push({
+        updateOne: {
+          filter: { email: r.email },
+          update: {
+            $setOnInsert: {
+              name: r.name,
+              email: r.email,
+              password: hashed,
+              role: 'Student',
+              isActive: r.isActive !== undefined ? !!r.isActive : true,
+            },
           },
+          upsert: true,
         },
-        upsert: true,
-      },
-    }));
-    const result = await User.bulkWrite(ops);
+      });
+    }
+    const result = await Student.bulkWrite(ops);
     res.json({ upserted: result.upsertedCount, modified: result.modifiedCount });
   } catch (e) {
     res.status(500).json({ message: 'Upload failed' });
