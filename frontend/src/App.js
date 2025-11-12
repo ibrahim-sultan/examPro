@@ -56,6 +56,7 @@ const AppRoutes = () => {
               <Route path="/admin/grouplist" element={<GroupListScreen />} />
               <Route path="/admin/group/:id/edit" element={<GroupEditScreen />} />
               <Route path="/admin/examlist" element={<ExamListScreen />} />
+              <Route path="/admin/exam/create" element={<ExamEditScreen />} />
               <Route path="/admin/exam/:id/edit" element={<ExamEditScreen />} />
               <Route path="/admin/questionlist" element={<QuestionListScreen />} />
               <Route path="/admin/question/create" element={<QuestionEditScreen />} />

@@ -40,12 +40,12 @@ const ExamEditScreen = () => {
       markingScheme,
     };
     console.log('Submitting exam data:', examData);
-    navigate('/admin/exams'); // Redirect after submission
+    navigate('/admin/examlist'); // Redirect after submission
   };
 
   return (
     <>
-      <Link to="/admin/exams" className="btn btn-light my-3">
+      <Link to="/admin/examlist" className="btn btn-light my-3">
         Go Back
       </Link>
       <h1>{id ? 'Edit Exam' : 'Create Exam'}</h1>
