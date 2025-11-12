@@ -15,7 +15,7 @@ const Header = () => {
 
   return (
     <header>
-      <Navbar expand="lg" collapseOnSelect className="navbar-glass">
+      <Navbar expand="md" collapseOnSelect className="navbar-glass">
         <Container>
           <LinkContainer to="/">
             <Navbar.Brand className="brand-gradient fw-bold">ExamPro</Navbar.Brand>

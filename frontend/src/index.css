@@ -50,8 +50,11 @@ main { padding-bottom: 80px; }
 /* Admin layout */
 .admin-shell {
   display: flex;
-  min-height: calc(100vh - 56px); /* header height was ~56px; header is hidden on admin, footer fixed */
+  min-height: calc(100vh - 56px); /* header hidden on admin, footer fixed */
+  position: relative;
 }
+.admin-topbar { display: none; }
+.admin-sidebar-wrap { position: relative; }
 .admin-sidebar {
   width: 240px;
   padding: 16px;
@@ -81,6 +84,21 @@ main { padding-bottom: 80px; }
 
 /* Admin dashboard grid */
 .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+/* Mobile responsive: collapse admin sidebar to drawer */
+@media (max-width: 991.98px) {
+  .admin-shell { flex-direction: column; }
+  .admin-topbar { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #0f172a; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .admin-topbar__btn { background: transparent; border: none; display: grid; gap: 4px; }
+  .admin-topbar__btn .bar { width: 22px; height: 2px; background: #e2e8f0; display: block; }
+  .admin-topbar__title { font-weight: 700; }
+
+  .admin-sidebar-wrap { position: fixed; left: 0; top: 0; bottom: 0; width: 78%; max-width: 320px; transform: translateX(-100%); transition: transform 180ms ease; z-index: 1040; }
+  .admin-sidebar-wrap.open { transform: translateX(0); }
+  .admin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1030; }
+
+  .admin-content { padding: 16px; }
+}
 .admin-card {
   display: block;
   background: #ffffff;
