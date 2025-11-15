@@ -36,7 +36,7 @@ const CreateGroupScreen = () => {
         Go Back
       </Link>
       <FormContainer>
-        <h1>Create Group</h1>
+        <h1>Create Class</h1>
         {loadingCreate && <Loader />}
         {errorCreate && <Message variant="danger">{errorCreate}</Message>}
         <Form onSubmit={submitHandler}>
@@ -44,7 +44,7 @@ const CreateGroupScreen = () => {
             <Form.Label>Name</Form.Label>
             <Form.Control
               type="text"
-              placeholder="Enter group name"
+              placeholder="Enter class name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

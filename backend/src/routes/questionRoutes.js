@@ -7,15 +7,21 @@ const {
   getQuestionById,
   updateQuestion,
   deleteQuestion,
+  getSubjects,
 } = require('../controllers/questionController');
 const { protect, admin } = require('../middlewares/authMiddleware');
 
-// All routes are protected and admin-only
-router.route('/')
+// Subjects list for students/admins
+router.get('/subjects', protect, getSubjects);
+
+// Admin-only question CRUD
+router
+  .route('/')
   .post(protect, admin, createQuestion)
   .get(protect, admin, getQuestions);
 
-router.route('/:id')
+router
+  .route('/:id')
   .get(protect, admin, getQuestionById)
   .put(protect, admin, updateQuestion)
   .delete(protect, admin, deleteQuestion);

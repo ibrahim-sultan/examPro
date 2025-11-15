@@ -207,7 +207,7 @@ const userSlice = createSlice({
     loading: false,
     error: null,
     success: false, // For profile update
-    userList: { users: [] }, // For admin user list
+    userList: { loading: false, error: null, users: [] }, // For admin user list
     userDelete: {}, // For admin delete user
     userUpdate: {}, // For admin update user
   },
@@ -296,16 +296,21 @@ const userSlice = createSlice({
       })
       // List Users (Admin)
       .addCase(listUsers.pending, (state) => {
-        state.loading = true;
+        state.userList = { ...state.userList, loading: true, error: null };
       })
       .addCase(listUsers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.userList = action.payload;
-        state.error = null;
+        state.userList = {
+          loading: false,
+          error: null,
+          users: action.payload,
+        };
       })
       .addCase(listUsers.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+        state.userList = {
+          loading: false,
+          error: action.payload,
+          users: [],
+        };
       })
       // Delete User (Admin)
       .addCase(deleteUser.pending, (state) => {

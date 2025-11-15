@@ -12,6 +12,7 @@ import UserEditScreen from './screens/admin/UserEditScreen';
 import StudentDashboardScreen from './screens/StudentDashboardScreen';
 import GroupListScreen from './screens/admin/GroupListScreen';
 import GroupEditScreen from './screens/admin/GroupEditScreen';
+import CreateGroupScreen from './screens/CreateGroupScreen';
 import ExamListScreen from './screens/admin/ExamListScreen';
 import ExamEditScreen from './screens/admin/ExamEditScreen';
 import QuestionListScreen from './screens/admin/QuestionListScreen';
@@ -54,6 +55,7 @@ const AppRoutes = () => {
               <Route path="/admin/userlist" element={<UserListScreen />} />
               <Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
               <Route path="/admin/grouplist" element={<GroupListScreen />} />
+              <Route path="/admin/group/create" element={<CreateGroupScreen />} />
               <Route path="/admin/group/:id/edit" element={<GroupEditScreen />} />
               <Route path="/admin/examlist" element={<ExamListScreen />} />
               <Route path="/admin/exam/create" element={<ExamEditScreen />} />

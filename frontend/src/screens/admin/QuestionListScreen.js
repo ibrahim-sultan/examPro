@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { Table, Button, Row, Col } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,6 +19,8 @@ const QuestionListScreen = () => {
   const { loading, error, questions } = useSelector((state) => state.question);
   const { userInfo } = useSelector((state) => state.user);
   const { success: successDelete } = useSelector((state) => state.question);
+
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
     dispatch(resetQuestionState());
@@ -40,6 +42,26 @@ const QuestionListScreen = () => {
     navigate('/admin/question/create');
   };
 
+  const subjectRows = useMemo(() => {
+    const map = new Map();
+    (questions || []).forEach((q) => {
+      const subj = q.subject || 'Unknown';
+      if (!map.has(subj)) {
+        map.set(subj, { subject: subj, total: 0 });
+      }
+      map.get(subj).total += 1;
+    });
+    return Array.from(map.values());
+  }, [questions]);
+
+  const questionsForSelected = useMemo(
+    () =>
+      (questions || []).filter(
+        (q) => !selectedSubject || q.subject === selectedSubject
+      ),
+    [questions, selectedSubject]
+  );
+
   return (
     <>
       <Row className="align-items-center">
@@ -56,34 +78,77 @@ const QuestionListScreen = () => {
         <Loader />
       ) : error ? (
         <Message variant="danger">{error}</Message>
+      ) : selectedSubject ? (
+        <>
+          <h4 className="mb-3">
+            Subject: {selectedSubject}{' '}
+            <Button
+              variant="link"
+              size="sm"
+              className="ms-2"
+              onClick={() => setSelectedSubject(null)}
+            >
+              &larr; Back to subjects
+            </Button>
+          </h4>
+          <Table striped bordered hover responsive className="table-sm">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>QUESTION</th>
+                <th>SUBJECT</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {questionsForSelected.map((question) => (
+                <tr key={question._id}>
+                  <td>{question._id}</td>
+                  <td>{question.questionText || question.text}</td>
+                  <td>{question.subject}</td>
+                  <td>
+                    <LinkContainer to={`/admin/question/${question._id}/edit`}>
+                      <Button variant="light" className="btn-sm me-2">
+                        <i className="fas fa-edit"></i>
+                      </Button>
+                    </LinkContainer>
+                    <Button
+                      variant="danger"
+                      className="btn-sm"
+                      onClick={() => deleteHandler(question._id)}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       ) : (
         <Table striped bordered hover responsive className="table-sm">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>TEXT</th>
+              <th>#</th>
               <th>SUBJECT</th>
+              <th>TOTAL QUESTIONS</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {questions.map((question) => (
-              <tr key={question._id}>
-                <td>{question._id}</td>
-                <td>{question.text}</td>
-                <td>{question.subject}</td>
+            {subjectRows.map((row, idx) => (
+              <tr key={row.subject}>
+                <td>{idx + 1}</td>
+                <td>{row.subject}</td>
+                <td>{row.total}</td>
                 <td>
-                  <LinkContainer to={`/admin/question/${question._id}/edit`}>
-                    <Button variant="light" className="btn-sm">
-                      <i className="fas fa-edit"></i>
-                    </Button>
-                  </LinkContainer>
                   <Button
-                    variant="danger"
-                    className="btn-sm"
-                    onClick={() => deleteHandler(question._id)}
+                    variant="secondary"
+                    size="sm"
+                    className="me-2"
+                    onClick={() => setSelectedSubject(row.subject)}
                   >
-                    <i className="fas fa-trash"></i>
+                    View
                   </Button>
                 </td>
               </tr>

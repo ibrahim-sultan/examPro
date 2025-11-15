@@ -8,6 +8,7 @@ const studentSchema = mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String, enum: ['Student'], default: 'Student' },
     groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
+    subjects: [{ type: String, trim: true }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

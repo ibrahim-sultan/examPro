@@ -27,6 +27,7 @@ const authUser = async (req, res) => {
         name: account.name,
         email: account.email,
         role,
+        subjects: account.subjects || [],
         token: generateToken(account._id),
       });
     } else {

@@ -6,13 +6,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Message from '../../components/Message';
 import Loader from '../../components/Loader';
-import { listGroups } from '../../store/slices/groupSlice'; // We will create this slice later
+import { listGroups, deleteGroup } from '../../store/slices/groupSlice';
 
 const GroupListScreen = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loading, error, groups } = useSelector((state) => state.group);
+  const { loading, error, groupList } = useSelector((state) => state.group);
   const { userInfo } = useSelector((state) => state.user);
 
   useEffect(() => {
@@ -26,23 +26,23 @@ const GroupListScreen = () => {
 
   const deleteHandler = (id) => {
     if (window.confirm('Are you sure?')) {
-      // dispatch(deleteGroup(id)); // Will be implemented later
+      dispatch(deleteGroup(id));
     }
   };
 
   const createGroupHandler = () => {
-    // dispatch(createGroup()); // Will be implemented later
+    navigate('/admin/group/create');
   };
 
   return (
     <>
       <Row className="align-items-center">
         <Col>
-          <h1>Groups</h1>
+          <h1>Classes</h1>
         </Col>
         <Col className="text-end">
           <Button className="my-3" onClick={createGroupHandler}>
-            <i className="fas fa-plus"></i> Create Group
+            <i className="fas fa-plus"></i> Create Class
           </Button>
         </Col>
       </Row>
@@ -60,7 +60,7 @@ const GroupListScreen = () => {
             </tr>
           </thead>
           <tbody>
-            {groups && groups.map((group) => (
+            {groupList && groupList.map((group) => (
               <tr key={group._id}>
                 <td>{group._id}</td>
                 <td>{group.name}</td>

@@ -1,6 +1,7 @@
 
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register a new user
@@ -83,12 +84,19 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get all users
+// @desc    Get all users (admins + students)
 // @route   GET /api/users
 // @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({}).select('-password');
-  res.json(users);
+  const students = await Student.find({}).select('-password');
+
+  const combined = [
+    ...users.map((u) => ({ ...u.toObject(), accountType: 'User' })),
+    ...students.map((s) => ({ ...s.toObject(), accountType: 'Student' })),
+  ];
+
+  res.json(combined);
 });
 
 // @desc    Get user by ID
@@ -149,6 +157,37 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get my subjects
+// @route   GET /api/users/subjects
+// @access  Private
+const getMySubjects = asyncHandler(async (req, res) => {
+  const Model = req.user.role === 'Student' ? Student : User;
+  const doc = await Model.findById(req.user._id).select('subjects');
+  res.json(doc?.subjects || []);
+});
+
+// @desc    Update my subjects
+// @route   PUT /api/users/subjects
+// @access  Private
+const updateMySubjects = asyncHandler(async (req, res) => {
+  const { subjects } = req.body;
+  if (!Array.isArray(subjects)) {
+    res.status(400);
+    throw new Error('subjects must be an array of strings');
+  }
+
+  const Model = req.user.role === 'Student' ? Student : User;
+  const doc = await Model.findById(req.user._id);
+  if (!doc) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  doc.subjects = subjects;
+  await doc.save();
+  res.json(doc.subjects);
+});
+
 module.exports = {
   registerUser,
   getUsers,
@@ -157,4 +196,6 @@ module.exports = {
   deleteUser,
   getUserProfile,
   updateUserProfile,
+  getMySubjects,
+  updateMySubjects,
 };

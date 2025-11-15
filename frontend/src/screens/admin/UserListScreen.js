@@ -49,7 +49,7 @@ const UserListScreen = () => {
               <th>ID</th>
               <th>NAME</th>
               <th>EMAIL</th>
-              <th>ADMIN</th>
+              <th>ROLE/TYPE</th>
               <th></th>
             </tr>
           </thead>
@@ -62,11 +62,7 @@ const UserListScreen = () => {
                   <a href={`mailto:${user.email}`}>{user.email}</a>
                 </td>
                 <td>
-                  {user.isAdmin ? (
-                    <i className="fas fa-check" style={{ color: 'green' }}></i>
-                  ) : (
-                    <i className="fas fa-times" style={{ color: 'red' }}></i>
-                  )}
+                  {user.role || user.accountType || 'User'}
                 </td>
                 <td>
                   <LinkContainer to={`/admin/user/${user._id}/edit`}>

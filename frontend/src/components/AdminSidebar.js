@@ -22,7 +22,7 @@ const AdminSidebar = ({ onNavigate }) => {
       <nav className="admin-sidebar__nav">
         <NavLink to="/admin" end onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
         <NavLink to="/admin/userlist" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Users</NavLink>
-        <NavLink to="/admin/grouplist" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Groups</NavLink>
+        <NavLink to="/admin/grouplist" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Classes</NavLink>
         <NavLink to="/admin/questionlist" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Questions</NavLink>
         <NavLink to="/admin/examlist" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Exams</NavLink>
         <NavLink to="/admin/monitoring" onClick={handleNavigate} className={({ isActive }) => `admin-link ${isActive ? 'active' : ''}`}>Monitoring</NavLink>

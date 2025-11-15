@@ -83,7 +83,7 @@ const GroupEditScreen = () => {
       <Row>
         <Col md={4}>
           <FormContainer>
-            <h2>Edit Group Details</h2>
+            <h2>Edit Class Details</h2>
             {loadingUpdate && <Loader />}
             {errorUpdate && <Message variant="danger">{errorUpdate}</Message>}
             {loadingDetails ? (
@@ -122,7 +122,7 @@ const GroupEditScreen = () => {
           </FormContainer>
         </Col>
         <Col md={8}>
-          <h2>Group Members</h2>
+          <h2>Class Members</h2>
 
           {/* Add Member Form */}
           <Row className="mb-3 align-items-end">

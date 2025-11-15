@@ -3,32 +3,34 @@ import React, { useEffect } from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { Table, Button, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import Loader from '../../components/Loader';
+import Message from '../../components/Message';
+import { listExams } from '../../store/slices/examSlice';
 
 const ExamListScreen = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  // Placeholder data - in a real app, this would come from Redux state
-  const exams = [
-    { _id: '1', title: 'Math 101 Final', subject: 'Mathematics', duration: 120 },
-    { _id: '2', title: 'History Midterm', subject: 'History', duration: 90 },
-  ];
-  const loading = false;
-  const error = null;
+  const { exams, loading, error } = useSelector((state) => state.exam);
+  const { userInfo } = useSelector((state) => state.user);
 
   useEffect(() => {
-    // In a real app, you would dispatch an action to fetch exams here
-    console.log('Fetching exams...');
-  }, []);
+    if (userInfo && (userInfo.role === 'Super Admin' || userInfo.role === 'Moderator')) {
+      dispatch(listExams());
+    } else {
+      navigate('/login');
+    }
+  }, [dispatch, navigate, userInfo]);
 
   const deleteHandler = (id) => {
     if (window.confirm('Are you sure you want to delete this exam?')) {
-      // In a real app, you would dispatch a delete action here
+      // TODO: dispatch deleteExam thunk when implemented
       console.log(`Deleting exam ${id}`);
     }
   };
 
   const createExamHandler = () => {
-    // In a real app, you might dispatch a create action or just navigate
     navigate('/admin/exam/create');
   };
 
@@ -45,9 +47,9 @@ const ExamListScreen = () => {
         </Col>
       </Row>
       {loading ? (
-        <p>Loading...</p>
+        <Loader />
       ) : error ? (
-        <p style={{ color: 'red' }}>{error}</p>
+        <Message variant="danger">{error.message || error}</Message>
       ) : (
         <Table striped bordered hover responsive className="table-sm">
           <thead>

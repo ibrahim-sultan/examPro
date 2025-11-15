@@ -9,6 +9,8 @@ const {
   deleteUser,
   getUserProfile,
   updateUserProfile,
+  getMySubjects,
+  updateMySubjects,
 } = require('../controllers/userController');
 const { protect, admin } = require('../middlewares/authMiddleware');
 
@@ -17,6 +19,12 @@ router
   .route('/profile')
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);
+
+router
+  .route('/subjects')
+  .get(protect, getMySubjects)
+  .put(protect, updateMySubjects);
+
 router
   .route('/:id')
   .delete(protect, admin, deleteUser)

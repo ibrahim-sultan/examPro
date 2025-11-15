@@ -28,6 +28,12 @@ const userSchema = mongoose.Schema(
         ref: 'Group', // You can create a Group model later
       },
     ],
+    subjects: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,

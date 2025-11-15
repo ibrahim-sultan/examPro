@@ -29,16 +29,16 @@ const GroupEditScreen = () => {
 
   return (
     <>
-      <Link to="/admin/groups" className="btn btn-light my-3">
+      <Link to="/admin/grouplist" className="btn btn-light my-3">
         Go Back
       </Link>
-      <h1>{id ? 'Edit Group' : 'Create Group'}</h1>
+      <h1>{id ? 'Edit Class' : 'Create Class'}</h1>
       <Form onSubmit={submitHandler}>
         <Form.Group controlId="name">
           <Form.Label>Name</Form.Label>
           <Form.Control
             type="text"
-            placeholder="Enter group name"
+            placeholder="Enter class name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           ></Form.Control>

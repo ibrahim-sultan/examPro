@@ -11,8 +11,8 @@ const AdminDashboardScreen = () => {
           <div className="admin-card__desc">Create, edit, and assign roles</div>
         </Link>
         <Link to="/admin/grouplist" className="admin-card">
-          <div className="admin-card__title">Groups</div>
-          <div className="admin-card__desc">Organize users into cohorts</div>
+          <div className="admin-card__title">Classes</div>
+          <div className="admin-card__desc">Organize students into classes</div>
         </Link>
         <Link to="/admin/questionlist" className="admin-card">
           <div className="admin-card__title">Questions</div>
