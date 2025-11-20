@@ -24,53 +24,58 @@ const ExamDetailsScreen = () => {
   }, [dispatch, examId, userInfo, navigate]);
 
   const startExamHandler = () => {
-    // This will later be used to initiate the exam session
-    console.log('Starting exam...');
+    // Navigate to the take screen where the student actually answers questions
     navigate(`/exam/${examId}/take`);
   };
 
+  // While loading or before the exam details have been fetched, show a loader
+  if (loading || !exam) {
+    return <Loader />;
+  }
+
+  if (error) {
+    return <Message variant="danger">{error}</Message>;
+  }
+
   return (
     <>
-      {loading ? (
-        <Loader />
-      ) : error ? (
-        <Message variant="danger">{error}</Message>
-      ) : (
-        <Row className="justify-content-md-center">
-          <Col md={8}>
-            <Card>
-              <Card.Header as="h2" className="text-center">{exam.title}</Card.Header>
-              <Card.Body>
-                <Card.Text>{exam.description}</Card.Text>
-                <ListGroup variant="flush">
-                  <ListGroup.Item>
-                    <strong>Subject:</strong> {exam.subject}
-                  </ListGroup.Item>
-                  <ListGroup.Item>
-                    <strong>Duration:</strong> {exam.duration} minutes
-                  </ListGroup.Item>
-                  <ListGroup.Item>
-                    <strong>Questions:</strong> {exam.questionCount}
-                  </ListGroup.Item>
-                  <ListGroup.Item>
-                    <strong>Instructions:</strong> Read each question carefully. Once you start, the timer will begin. Do not refresh the page.
-                  </ListGroup.Item>
-                </ListGroup>
-                <div className="d-grid mt-4">
-                  <Button
-                    onClick={startExamHandler}
-                    variant="primary"
-                    size="lg"
-                  >
-                    Begin Exam
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      )}
-    </>
+      <Button variant="light" className="mb-3" onClick={() => navigate('/dashboard')}>
+        &larr; Back to Dashboard
+      </Button>
+      <Row className="justify-content-md-center">
+        <Col md={8}>
+          <Card>
+            <Card.Header as="h2" className="text-center">{exam.title}</Card.Header>
+            <Card.Body>
+              <Card.Text>{exam.description}</Card.Text>
+              <ListGroup variant="flush">
+              <ListGroup.Item>
+                <strong>Subject:</strong> {exam.subject}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Duration:</strong> {exam.duration} minutes
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Questions:</strong> {exam.questionCount}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Instructions:</strong> Read each question carefully. Once you start, the timer will begin. Do not refresh the page.
+              </ListGroup.Item>
+            </ListGroup>
+            <div className="d-grid mt-4">
+              <Button
+                onClick={startExamHandler}
+                variant="primary"
+                size="lg"
+              >
+                Begin Exam
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
+  </>
   );
 };
 

@@ -134,6 +134,17 @@ main { padding-bottom: 48px; }
   box-shadow: 0 10px 24px rgba(139,92,246,0.45);
 }
 
+/* Exam taking layout */
+.exam-take-shell {
+  min-height: calc(100vh - 140px);
+  align-items: center;
+}
+
+.exam-card {
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+}
+
 .input-elevate {
   background: rgba(17, 24, 39, 0.6) !important;
   border: 1px solid rgba(148, 163, 184, 0.25) !important;

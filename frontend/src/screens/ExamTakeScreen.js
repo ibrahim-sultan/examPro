@@ -96,9 +96,9 @@ const ExamTakeScreen = () => {
   const qid = currentQuestion._id || currentQuestion.id;
 
   return (
-    <Row className="justify-content-md-center">
+    <Row className="justify-content-md-center exam-take-shell">
       <Col md={8}>
-        <Card>
+        <Card className="shadow-lg exam-card">
           <Card.Header className="d-flex justify-content-between align-items-center">
             <div>
               <h3 className="mb-0">{activeResult.exam.title}</h3>
