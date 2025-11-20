@@ -8,10 +8,8 @@ const Question = require('../models/questionModel');
 const getExams = async (req, res) => {
   try {
     const query = {};
-    // If the user is a student, only show published exams
-    if (req.user.role === 'Student') {
-      query.status = 'Published';
-    }
+    // For now, show all exams to students; time and access control are handled on the client.
+    // If you later want to hide archived exams, you can change this to filter by status.
     const exams = await Exam.find(query).select('-questions'); // Don't send questions in list view
     res.json(exams);
   } catch (error) {
