@@ -41,11 +41,38 @@ const QuestionEditScreen = () => {
       navigate('/admin/questionlist');
     } else {
       if (questionId && (!question || question._id !== questionId)) {
+        // Load question details from the API when editing
         dispatch(getQuestionDetails(questionId));
       } else if (questionId && question) {
-        setText(question.text);
-        setSubject(question.subject);
-        setOptions(question.options);
+        // Map backend shape (questionText, options: [string], correctOption)
+        // into the local form state shape used by this component.
+        setText(question.questionText || question.text || '');
+        setSubject(question.subject || '');
+
+        if (Array.isArray(question.options)) {
+          const mappedOptions = question.options.map((opt, index) => {
+            if (typeof opt === 'string') {
+              return {
+                text: opt,
+                isCorrect:
+                  typeof question.correctOption === 'number' &&
+                  question.correctOption === index,
+              };
+            }
+            // Fallback if options are already objects
+            return {
+              text: opt.text || '',
+              isCorrect: !!opt.isCorrect,
+            };
+          });
+
+          // Ensure we always have at least 4 option rows for the UI
+          while (mappedOptions.length < 4) {
+            mappedOptions.push({ text: '', isCorrect: false });
+          }
+
+          setOptions(mappedOptions);
+        }
       }
     }
   }, [questionId, dispatch, success, successUpdate, question, navigate]);
@@ -66,7 +93,8 @@ const QuestionEditScreen = () => {
   const submitHandler = (e) => {
     e.preventDefault();
     if (questionId) {
-      dispatch(updateQuestion({ id: questionId, text, subject, options }));
+      // Backend expects the ID in the URL path; our service reads `_id` from the payload.
+      dispatch(updateQuestion({ _id: questionId, text, subject, options }));
     } else {
       dispatch(createQuestion({ text, subject, options }));
     }

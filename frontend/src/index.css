@@ -28,6 +28,7 @@ code {
 }
 /* Ensure content doesn't go under fixed footer */
 main { padding-bottom: 120px; }
+.admin-content { padding-bottom: 120px; }
 
 .brand-gradient {
   background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);

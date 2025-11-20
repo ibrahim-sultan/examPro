@@ -150,6 +150,17 @@ const QuestionListScreen = () => {
                   >
                     View
                   </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() =>
+                      navigate('/admin/exam/create', {
+                        state: { subject: row.subject, questionCount: row.total },
+                      })
+                    }
+                  >
+                    Create Exam
+                  </Button>
                 </td>
               </tr>
             ))}
