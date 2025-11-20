@@ -30,6 +30,7 @@ import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
 
 const AppRoutes = () => {
   const location = useLocation();
+
   return (
     <Container>
       <PageTransition routeKey={location.pathname}>
@@ -68,7 +69,7 @@ const AppRoutes = () => {
             </Route>
           </Route>
 
-          {/* Fallback: redirect any unknown route to login */
+          {/* Fallback: redirect any unknown route to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </PageTransition>
