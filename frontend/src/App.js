@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -67,6 +67,9 @@ const AppRoutes = () => {
               <Route path="/admin/bulk" element={<BulkUploadScreen />} />
             </Route>
           </Route>
+
+          {/* Fallback: redirect any unknown route to login */
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </PageTransition>
     </Container>

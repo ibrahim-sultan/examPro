@@ -5,7 +5,7 @@ import { LinkContainer } from 'react-router-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
-import { listAvailableExams } from '../store/slices/examSlice';
+import { listExams } from '../store/slices/examSlice';
 import { logout } from '../store/slices/userSlice';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
@@ -32,7 +32,8 @@ const StudentDashboardScreen = () => {
       navigate('/login');
       return;
     }
-    dispatch(listAvailableExams());
+    // Load all published exams for the student; time gating is handled in the UI
+    dispatch(listExams());
     loadSubjects();
     loadResults();
   }, [dispatch, navigate, userInfo]);
@@ -104,6 +105,8 @@ const StudentDashboardScreen = () => {
     }
   };
 
+  // Show all published exams as "upcoming" regardless of date/time.
+  // Time gating for when an exam can actually be started is handled in the UI below.
   const upcomingExams = useMemo(() => availableExams, [availableExams]);
   const completedExams = useMemo(() => results, [results]);
 
@@ -197,11 +200,25 @@ const StudentDashboardScreen = () => {
               </thead>
               <tbody>
                 {upcomingExams.map((exam) => {
+                  const now = new Date();
                   const start = exam.startTime ? new Date(exam.startTime) : null;
+                  const end = exam.endTime ? new Date(exam.endTime) : null;
+
                   const dateStr = start ? start.toLocaleDateString() : '-';
                   const timeStr = start
                     ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : '-';
+
+                  // Exam can only be started when its start time has been reached.
+                  // If an end time is set, it must also be before that end time.
+                  let isActive = true;
+                  if (start && now < start) {
+                    isActive = false;
+                  }
+                  if (end && now > end) {
+                    isActive = false;
+                  }
+
                   return (
                     <tr key={exam._id}>
                       <td>{exam.subject}</td>
@@ -209,9 +226,15 @@ const StudentDashboardScreen = () => {
                       <td>{timeStr}</td>
                       <td>{exam.duration}</td>
                       <td>
-                        <LinkContainer to={`/exam/${exam._id}`}>
-                          <Button size="sm">Start</Button>
-                        </LinkContainer>
+                        {isActive ? (
+                          <LinkContainer to={`/exam/${exam._id}`}>
+                            <Button size="sm">Start</Button>
+                          </LinkContainer>
+                        ) : (
+                          <Button size="sm" disabled>
+                            Not yet available
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

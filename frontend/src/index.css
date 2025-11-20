@@ -19,16 +19,12 @@ code {
 .footer-glass {
   background: linear-gradient(90deg, rgba(2,6,23,0.95), rgba(17,24,39,0.9));
   border-top: 1px solid rgba(255,255,255,0.06);
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* Use static positioning so the footer no longer overlaps form buttons */
   width: 100%;
   z-index: 100;
 }
-/* Ensure content doesn't go under fixed footer */
-main { padding-bottom: 120px; }
-.admin-content { padding-bottom: 120px; }
+/* Add bottom padding so content has breathing room above the footer */
+main { padding-bottom: 48px; }
 
 .brand-gradient {
   background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
@@ -78,7 +74,7 @@ main { padding-bottom: 120px; }
 }
 .admin-link:hover { background: rgba(148,163,184,0.18); color: #ffffff; }
 .admin-link.active { background: linear-gradient(135deg, #8b5cf6, #06b6d4); color: white; }
-.admin-content { flex: 1; padding: 20px; background: #f8fafc; }
+.admin-content { flex: 1; padding: 20px 20px 140px; background: #f8fafc; }
 .admin-sidebar__footer { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
 .admin-logout { width: 100%; background: #ef4444; color: #fff; border: none; padding: 10px 12px; border-radius: 8px; font-weight: 600; }
 .admin-logout:hover { filter: brightness(1.05); }
