@@ -5,7 +5,7 @@ import { LinkContainer } from 'react-router-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
-import { listExams } from '../store/slices/examSlice';
+import { listAvailableExams } from '../store/slices/examSlice';
 import { logout } from '../store/slices/userSlice';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
@@ -32,8 +32,8 @@ const StudentDashboardScreen = () => {
       navigate('/login');
       return;
     }
-    // Load all published exams for the student; time gating is handled in the UI
-    dispatch(listExams());
+    // Load exams available to this student; time gating and groups are enforced on the backend
+    dispatch(listAvailableExams());
     loadSubjects();
     loadResults();
   }, [dispatch, navigate, userInfo]);

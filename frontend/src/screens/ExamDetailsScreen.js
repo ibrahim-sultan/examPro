@@ -28,13 +28,16 @@ const ExamDetailsScreen = () => {
     navigate(`/exam/${examId}/take`);
   };
 
-  // While loading or before the exam details have been fetched, show a loader
-  if (loading || !exam) {
+  if (loading) {
     return <Loader />;
   }
 
   if (error) {
     return <Message variant="danger">{error}</Message>;
+  }
+
+  if (!exam) {
+    return <Message variant="info">Exam not found.</Message>;
   }
 
   return (
