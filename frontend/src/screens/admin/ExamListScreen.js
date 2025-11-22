@@ -8,7 +8,7 @@ import axios from 'axios';
 import API_BASE_URL from '../../config/api';
 import Loader from '../../components/Loader';
 import Message from '../../components/Message';
-import { listExams } from '../../store/slices/examSlice';
+import { listExams, deleteExam } from '../../store/slices/examSlice';
 
 const ExamListScreen = () => {
   const navigate = useNavigate();
@@ -27,8 +27,11 @@ const ExamListScreen = () => {
 
   const deleteHandler = (id) => {
     if (window.confirm('Are you sure you want to delete this exam?')) {
-      // TODO: dispatch deleteExam thunk when implemented
-      console.log(`Deleting exam ${id}`);
+      dispatch(deleteExam(id))
+        .unwrap()
+        .catch((err) => {
+          alert(err || 'Failed to delete exam');
+        });
     }
   };
 

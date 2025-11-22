@@ -69,6 +69,31 @@ export const getExamDetails = createAsyncThunk(
   }
 );
 
+// Delete an exam (admin)
+export const deleteExam = createAsyncThunk(
+  'exams/deleteExam',
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const {
+        user: { userInfo },
+      } = getState();
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      await axios.delete(`${API_BASE_URL}/api/exams/${id}`, config);
+      return id;
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return rejectWithValue(message);
+    }
+  }
+);
+
 const examSlice = createSlice({
   name: 'exam',
   initialState: {
@@ -117,6 +142,13 @@ const examSlice = createSlice({
       })
       .addCase(getExamDetails.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteExam.fulfilled, (state, action) => {
+        // Remove the deleted exam from the cached list
+        state.exams = state.exams.filter((exam) => exam._id !== action.payload);
+      })
+      .addCase(deleteExam.rejected, (state, action) => {
         state.error = action.payload;
       });
   },
