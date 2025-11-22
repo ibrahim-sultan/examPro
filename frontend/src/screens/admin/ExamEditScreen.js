@@ -28,6 +28,7 @@ const ExamEditScreen = () => {
     correct: 1,
     incorrect: 0,
   });
+  const [status, setStatus] = useState('Published'); // Draft | Published | Archived
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,6 +49,7 @@ const ExamEditScreen = () => {
         setDescription(data.description || '');
         setDuration(data.duration || 60);
         setMarkingScheme(data.markingScheme || { correct: 1, incorrect: 0 });
+        setStatus(data.status || 'Draft');
         // Map ISO strings to datetime-local format (YYYY-MM-DDTHH:MM)
         if (data.startTime) {
           const d = new Date(data.startTime);
@@ -104,6 +106,7 @@ const ExamEditScreen = () => {
         startTime: startTime ? new Date(startTime).toISOString() : undefined,
         endTime: endTime ? new Date(endTime).toISOString() : undefined,
         markingScheme,
+        status,
       };
 
       if (id) {
@@ -168,6 +171,15 @@ const ExamEditScreen = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </Form.Group>
+
+        <Form.Group controlId="status" className="my-3">
+          <Form.Label>Status</Form.Label>
+          <Form.Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="Draft">Draft</option>
+            <option value="Published">Published</option>
+            <option value="Archived">Archived</option>
+          </Form.Select>
         </Form.Group>
 
         <Form.Group controlId="duration" className="my-3">
