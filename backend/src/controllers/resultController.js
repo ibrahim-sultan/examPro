@@ -85,7 +85,7 @@ const startExam = async (req, res) => {
 const submitExam = async (req, res) => {
   try {
     const { resultId } = req.params;
-    const { answers } = req.body; // { [questionId]: selectedDisplayIndex }
+    const rawAnswers = (req.body && req.body.answers) || {}; // { [questionId]: selectedDisplayIndex }
     const userId = req.user._id;
 
     const result = await Result.findById(resultId);
@@ -107,15 +107,27 @@ const submitExam = async (req, res) => {
     let score = 0;
     const answerDetails = [];
 
+    const resultAnswersArray = Array.isArray(result.answers) ? result.answers : [];
+
     exam.questions.forEach((question) => {
       const qid = question._id.toString();
-      const selectedDisplayIndex = typeof answers[qid] === 'number' ? answers[qid] : null;
-      const existing = result.answers.find((a) => a.question.toString() === qid);
-      const optionOrder = existing?.optionOrder || [...Array(question.options.length).keys()];
-      const selectedOriginalIndex = selectedDisplayIndex !== null ? optionOrder[selectedDisplayIndex] : null;
-      const isCorrect = selectedOriginalIndex !== null && selectedOriginalIndex === question.correctOption;
+      const selectedDisplayIndex =
+        typeof rawAnswers[qid] === 'number' ? rawAnswers[qid] : null;
+      const existing = resultAnswersArray.find((a) => a.question.toString() === qid);
+      const optionOrder = existing?.optionOrder || [...Array((question.options || []).length).keys()];
+      const selectedOriginalIndex =
+        selectedDisplayIndex !== null && optionOrder[selectedDisplayIndex] !== undefined
+          ? optionOrder[selectedDisplayIndex]
+          : null;
+      const isCorrect =
+        selectedOriginalIndex !== null && selectedOriginalIndex === question.correctOption;
       if (isCorrect) score += 1; // TODO: apply marking scheme
-      answerDetails.push({ question: question._id, selectedOption: selectedDisplayIndex, optionOrder, isCorrect });
+      answerDetails.push({
+        question: question._id,
+        selectedOption: selectedDisplayIndex,
+        optionOrder,
+        isCorrect,
+      });
     });
 
     result.answers = answerDetails;
