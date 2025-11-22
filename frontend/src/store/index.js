@@ -3,6 +3,7 @@ import userReducer from './slices/userSlice';
 import groupReducer from './slices/groupSlice';
 import examReducer from './slices/examSlice';
 import questionReducer from './slices/questionSlice';
+import resultReducer from './slices/resultSlice';
 
 const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
     group: groupReducer,
     exam: examReducer,
     question: questionReducer,
+    result: resultReducer,
   },
 });
 

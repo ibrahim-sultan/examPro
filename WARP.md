@@ -144,6 +144,22 @@ Other feature areas (auth, users, groups, bulk upload, monitoring, results, prod
 - Controllers implement the actual logic (e.g. CRUD, dashboard/monitoring, file uploads, result calculation).
 - Models represent core domain entities (`User`, `Student`, `Question`, `Result`, `Group`, etc.).
 
+### Roles, students, and groups
+
+- `User` documents represent all authenticated principals and carry a `role` field (`'Student' | 'Moderator' | 'Super Admin'`), along with `groups` and `subjects` arrays used for access control and filtering.
+- A separate `Student` model mirrors much of the user shape but is locked to the `'Student'` role; both models share password hashing and `matchPassword` helpers.
+- `Group` documents define named cohorts with `members` and a `createdBy` admin, and are linked from both users/students and exams (`assignedGroups`) to control which learners see which exams.
+
+### Exam sessions, results, and analytics
+
+- Result lifecycle is managed in `src/controllers/resultController.js` and `src/models/resultModel.js`:
+  - `startExam` creates or resumes an exam "session" (`Result` document) per user+exam, precomputing a per-question `optionOrder` array and (optionally) shuffling questions when `exam.randomizeQuestions` is enabled.
+  - When resuming an in-progress result, questions and options are reconstructed using the stored ordering so students see a consistent randomized view.
+  - `submitExam` maps the student's selected display index back to the original option index using `optionOrder`, computes a score, and marks the result as `Completed`.
+- Administrative endpoints expose reporting:
+  - Per-exam result listings and CSV export with basic fields plus anti-cheating metrics such as `tabSwitchCount` and `copyPasteAttempts`.
+  - Simple exam-level analytics (count, average, min, max scores) and per-student "my results" views that hide raw answer details.
+
 ### Seeding and bulk operations
 
 - `src/seeder.js` – used by the `npm run seed:admin` script to seed initial admin user data (and potentially other initial entities).

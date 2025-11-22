@@ -4,6 +4,8 @@ import { LinkContainer } from 'react-router-bootstrap';
 import { Table, Button, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 import Loader from '../../components/Loader';
 import Message from '../../components/Message';
 import { listExams } from '../../store/slices/examSlice';
@@ -27,6 +29,35 @@ const ExamListScreen = () => {
     if (window.confirm('Are you sure you want to delete this exam?')) {
       // TODO: dispatch deleteExam thunk when implemented
       console.log(`Deleting exam ${id}`);
+    }
+  };
+
+  const downloadResultsHandler = async (exam) => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+        responseType: 'blob',
+      };
+      const { data } = await axios.get(
+        `${API_BASE_URL}/api/results/exam/${exam._id}/export`,
+        config
+      );
+
+      const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filename = `${exam.subject || exam.title || 'exam'}-results.csv`;
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      // Surface a simple error to the admin; detailed logging can be added later
+      alert(e.response?.data?.message || e.message || 'Failed to download results');
     }
   };
 
@@ -58,6 +89,7 @@ const ExamListScreen = () => {
               <th>TITLE</th>
               <th>SUBJECT</th>
               <th>DURATION (MINS)</th>
+              <th>RESULTS</th>
               <th></th>
             </tr>
           </thead>
@@ -69,8 +101,17 @@ const ExamListScreen = () => {
                 <td>{exam.subject}</td>
                 <td>{exam.duration}</td>
                 <td>
+                  <Button
+                    variant="info"
+                    className="btn-sm"
+                    onClick={() => downloadResultsHandler(exam)}
+                  >
+                    Results
+                  </Button>
+                </td>
+                <td>
                   <LinkContainer to={`/admin/exam/${exam._id}/edit`}>
-                    <Button variant="light" className="btn-sm">
+                    <Button variant="light" className="btn-sm me-2">
                       <i className="fas fa-edit"></i>
                     </Button>
                   </LinkContainer>
