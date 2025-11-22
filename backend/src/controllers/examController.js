@@ -73,6 +73,7 @@ const createExam = async (req, res) => {
       randomizeQuestions,
       questionCount, // Number of questions to add
       assignedGroups,
+      status, // Draft | Published | Archived
     } = req.body;
 
     // Fetch random questions from the bank for the given subject
@@ -99,6 +100,7 @@ const createExam = async (req, res) => {
       questions: questionIds,
       createdBy: req.user._id,
       assignedGroups,
+      status: status || 'Draft',
     });
 
     const createdExam = await exam.save();
