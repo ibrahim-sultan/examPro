@@ -92,8 +92,10 @@ const submitExam = async (req, res) => {
 
     const result = await Result.findById(resultId);
     if (!result) return res.status(404).json({ message: 'Exam session not found.' });
-    if (result.user.toString() !== userId.toString()) return res.status(403).json({ message: 'Not authorized to submit this exam.' });
-    if (result.status === 'Completed') return res.status(400).json({ message: 'This exam has already been submitted.' });
+    if (result.user.toString() !== userId.toString())
+      return res.status(403).json({ message: 'Not authorized to submit this exam.' });
+    if (result.status === 'Completed')
+      return res.status(400).json({ message: 'This exam has already been submitted.' });
 
     const exam = await Exam.findById(result.exam).populate('questions');
     if (!exam) return res.status(404).json({ message: 'Associated exam not found.' });
@@ -109,7 +111,10 @@ const submitExam = async (req, res) => {
     let score = 0;
     const answerDetails = [];
 
-    const resultAnswersArray = Array.isArray(result.answers) ? result.answers : [];
+    // Filter out any malformed entries from legacy data
+    const resultAnswersArray = Array.isArray(result.answers)
+      ? result.answers.filter((a) => a && a.question)
+      : [];
 
     exam.questions.forEach((question) => {
       const qid = question._id.toString();
@@ -122,15 +127,28 @@ const submitExam = async (req, res) => {
           ? Number(rawVal)
           : null;
 
-      const existing = resultAnswersArray.find((a) => a.question.toString() === qid);
-      const optionOrder = existing?.optionOrder || [...Array((question.options || []).length).keys()];
+      const existing = resultAnswersArray.find(
+        (a) => a.question && a.question.toString() === qid
+      );
+
+      const optionOrder =
+        (existing && Array.isArray(existing.optionOrder) && existing.optionOrder.length)
+          ? existing.optionOrder
+          : [...Array((question.options || []).length).keys()];
+
       const selectedOriginalIndex =
         selectedDisplayIndex !== null && optionOrder[selectedDisplayIndex] !== undefined
           ? optionOrder[selectedDisplayIndex]
           : null;
+
       const isCorrect =
         selectedOriginalIndex !== null && selectedOriginalIndex === question.correctOption;
-      if (isCorrect) score += 1; // TODO: apply marking scheme
+
+      if (isCorrect) {
+        // Currently +1 per correct answer. To apply exam.markingScheme, replace with that logic.
+        score += 1;
+      }
+
       answerDetails.push({
         question: question._id,
         selectedOption: selectedDisplayIndex,
@@ -148,6 +166,7 @@ const submitExam = async (req, res) => {
     const updatedResult = await result.save();
     res.json(updatedResult);
   } catch (error) {
+    console.error('submitExam error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

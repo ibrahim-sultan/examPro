@@ -26,6 +26,7 @@ From `backend/`:
   - `npm start`
 - Seed an initial admin user (see `src/seeder.js` for details):
   - `npm run seed:admin`
+  - Creates a `Super Admin` user with email `admin@exampro.com` and password `admin123` in MongoDB (change the password after first login).
 
 Tests:
 - There is a `npm test` script, but it is currently a placeholder that exits with an error. No backend test suite is configured yet.
@@ -76,6 +77,9 @@ Additional frontend config:
   - `healthCheckPath` is `/api/health`, wired to the Express health endpoint in `server.js`.
   - Environment variables include `NODE_ENV=production`, `NODE_VERSION=20`, `REACT_APP_API_URL=https://exampro-ysox.onrender.com`, plus `MONGO_URI` and `JWT_SECRET` supplied via Render.
 - `render-build.sh` mirrors the Render build steps (`npm --prefix backend ci/install`, `npm --prefix frontend ci/install`, `npm --prefix frontend run build`) and can be used locally or in other CI environments.
+- `frontend/netlify.toml` supports deploying the built React app as a static site on Netlify:
+  - Uses `npm run build` as the build command with `publish = "build"`.
+  - Redirects all paths (`/*`) to `/index.html` so the SPA handles routing.
 
 ---
 
@@ -192,7 +196,7 @@ Key entrypoints and directories:
   - Configures global `axios.defaults.baseURL` to match the backend URL logic from `config/api.js`.
 
 - `frontend/src/App.js`:
-  - Uses `react-router-dom` to define all routes.
+  - Uses `react-router-dom` with `HashRouter` to define all routes, which keeps client-side routing working even on static hosts or without custom server route configuration.
   - Splits routing into:
     - Public routes: `/`, `/login`, `/register`, `/exam/:id`.
     - Protected student routes under a `PrivateRoute` wrapper: `/dashboard`, `/profile`, `/exam/:id/take`, `/results/:id`.
