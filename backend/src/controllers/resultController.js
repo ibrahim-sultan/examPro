@@ -113,8 +113,15 @@ const submitExam = async (req, res) => {
 
     exam.questions.forEach((question) => {
       const qid = question._id.toString();
+
+      // Answers come from the frontend as an object: { [questionId]: selectedDisplayIndex }.
+      // In practice, the indices may be numbers or numeric strings, so normalise to Number.
+      const rawVal = rawAnswers[qid];
       const selectedDisplayIndex =
-        typeof rawAnswers[qid] === 'number' ? rawAnswers[qid] : null;
+        rawVal !== undefined && rawVal !== null && !Number.isNaN(Number(rawVal))
+          ? Number(rawVal)
+          : null;
+
       const existing = resultAnswersArray.find((a) => a.question.toString() === qid);
       const optionOrder = existing?.optionOrder || [...Array((question.options || []).length).keys()];
       const selectedOriginalIndex =
