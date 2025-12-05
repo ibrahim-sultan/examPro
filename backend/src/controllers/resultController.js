@@ -1,5 +1,7 @@
 const Result = require('../models/resultModel');
 const Exam = require('../models/examModel');
+const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 
 const shuffle = (arr) => {
   const a = [...arr];
@@ -176,17 +178,42 @@ const getResultsForExam = async (req, res) => {
 };
 
 // Export CSV for exam results (admin)
+// NOTE: Result.user may point to either a User or a Student document.
+// We therefore resolve names/emails by looking in both collections instead of relying solely on Mongoose populate.
 const exportResultsCSV = async (req, res) => {
   try {
     const { examId } = req.params;
-    const results = await Result.find({ exam: examId }).populate('user', 'name email');
+    const results = await Result.find({ exam: examId });
+
+    // Build a unique list of account IDs referenced by results
+    const userIds = Array.from(
+      new Set(
+        results
+          .map((r) => (r.user ? r.user.toString() : null))
+          .filter(Boolean)
+      )
+    );
+
+    // Fetch matching accounts from both User and Student collections
+    const [users, students] = await Promise.all([
+      User.find({ _id: { $in: userIds } }).select('name email'),
+      Student.find({ _id: { $in: userIds } }).select('name email'),
+    ]);
+
+    const accountMap = new Map();
+    users.forEach((u) => accountMap.set(u._id.toString(), u));
+    students.forEach((s) => accountMap.set(s._id.toString(), s));
+
     const rows = [
-      ['Name', 'Email', 'Score', 'Status', 'Start Time', 'End Time', 'Tab Switches', 'Copy/Paste Attempts']
+      ['Name', 'Email', 'Score', 'Status', 'Start Time', 'End Time', 'Tab Switches', 'Copy/Paste Attempts'],
     ];
+
     for (const r of results) {
+      const account = r.user ? accountMap.get(r.user.toString()) : null;
+
       rows.push([
-        r.user?.name || '',
-        r.user?.email || '',
+        account?.name || '',
+        account?.email || '',
         r.score ?? 0,
         r.status,
         r.startTime ? new Date(r.startTime).toISOString() : '',
@@ -195,7 +222,19 @@ const exportResultsCSV = async (req, res) => {
         r.copyPasteAttempts ?? 0,
       ]);
     }
-    const csv = rows.map((cols) => cols.map((c) => (typeof c === 'string' && c.includes(',') ? `"${c.replaceAll('"','""')}"` : c)).join(',')).join('\n');
+
+    const csv = rows
+      .map((cols) =>
+        cols
+          .map((c) =>
+            typeof c === 'string' && c.includes(',')
+              ? `\"${c.replaceAll('\"', '\"\"')}\"`
+              : c
+          )
+          .join(',')
+      )
+      .join('\n');
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="results.csv"');
     return res.send(csv);

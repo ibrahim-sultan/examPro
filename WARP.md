@@ -68,6 +68,15 @@ Additional frontend config:
    - Run `npm install` once, then `npm start`.
 3. During local development, the frontend dev server uses the proxy to reach `http://localhost:5000` for API calls.
 
+### Deployment (Render)
+
+- Root-level `render.yaml` defines a single Render web service:
+  - `buildCommand` installs backend and frontend dependencies and runs `npm --prefix frontend run build` to produce the React build.
+  - `startCommand` is `cd backend` followed by `node server.js`, matching the `npm start` behavior but driven by Render.
+  - `healthCheckPath` is `/api/health`, wired to the Express health endpoint in `server.js`.
+  - Environment variables include `NODE_ENV=production`, `NODE_VERSION=20`, `REACT_APP_API_URL=https://exampro-ysox.onrender.com`, plus `MONGO_URI` and `JWT_SECRET` supplied via Render.
+- `render-build.sh` mirrors the Render build steps (`npm --prefix backend ci/install`, `npm --prefix frontend ci/install`, `npm --prefix frontend run build`) and can be used locally or in other CI environments.
+
 ---
 
 ## Backend architecture (Express + MongoDB)
@@ -111,13 +120,13 @@ Example: **exams**
   - Student-specific endpoint: `GET /api/exams/available` (protected) to list exams a student can currently take.
   - Admin endpoints for CRUD:
     - `POST /api/exams` – create exam (admin only).
-    - `GET /api/exams` – list exams (protected, students see filtered set).
+    - `GET /api/exams` – list exams (protected; same controller for students and admins, with questions omitted from the list view).
     - `GET /api/exams/:id` – get exam details (protected; behavior differs for students vs admins).
     - `PUT /api/exams/:id` – update exam (admin only).
     - `DELETE /api/exams/:id` – delete exam (admin only).
 
 - `src/controllers/examController.js`:
-  - `getExams` – lists exams, restricting to `status: 'Published'` for `Student` role, and omitting question content in list views.
+  - `getExams` – returns all exams for both students and admins but omits question content in list views; time/status/group restrictions are handled via `getAvailableExams` and, in some cases, client-side logic.
   - `getExamById` – returns a reduced view for students (no full question detail) and full details for admins, with role-based access checks.
   - `createExam` – creates an exam by sampling questions from the question bank:
     - Uses `Question.aggregate` with `$match` on `subject` and `$sample` for random selection.
