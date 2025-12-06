@@ -196,11 +196,9 @@ const getResultById = async (req, res) => {
     const currentUser = req.user || {};
     const role = currentUser.role || '';
     const isAdmin = role === 'Super Admin' || role === 'Moderator';
-    const isOwner =
-      result.user && currentUser._id && result.user.toString() === currentUser._id.toString();
 
-    // Allow admins or the student who owns this result; block everyone else
-    if (!isAdmin && !isOwner) {
+    // Only admins can view detailed exam results; students are not allowed
+    if (!isAdmin) {
       return res.status(403).json({ message: 'Not authorized to view this result' });
     }
 
