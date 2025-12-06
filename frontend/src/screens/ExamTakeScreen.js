@@ -22,6 +22,35 @@ const ExamTakeScreen = () => {
   const [answers, setAnswers] = useState({}); // { [questionId]: selectedOptionIndex }
 
   useEffect(() => {
+    // If the user is not logged in for some reason, send them to login
+    if (!userInfo) {
+      navigate('/login');
+      return;
+    }
+
+    const currentUserId = userInfo._id;
+    const resultUserId =
+      activeResult && activeResult.user && activeResult.user.toString
+        ? activeResult.user.toString()
+        : activeResult?.user;
+    const resultExamId =
+      activeResult && activeResult.exam && activeResult.exam.toString
+        ? activeResult.exam.toString()
+        : activeResult?.exam;
+
+    const mismatchedUser =
+      !!activeResult && !!currentUserId && !!resultUserId && resultUserId !== currentUserId;
+    const mismatchedExam =
+      !!activeResult && !!examId && !!resultExamId && resultExamId !== examId;
+
+    // If there is no active result yet, or the active result belongs to a different
+    // user/exam (e.g. previous student in the same browser session), always start
+    // a fresh exam session for the current user and exam.
+    if (!activeResult || mismatchedUser || mismatchedExam) {
+      dispatch(startExam(examId));
+      return;
+    }
+
     if (activeResult && activeResult.status === 'Completed') {
       // After a student submits an exam, send them back to the dashboard
       // instead of showing the detailed result view.
@@ -31,8 +60,6 @@ const ExamTakeScreen = () => {
       } else {
         navigate(`/results/${activeResult._id}`);
       }
-    } else if (!activeResult) {
-      dispatch(startExam(examId));
     }
   }, [dispatch, examId, navigate, activeResult, userInfo]);
 
