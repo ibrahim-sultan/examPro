@@ -23,11 +23,17 @@ const ExamTakeScreen = () => {
 
   useEffect(() => {
     if (activeResult && activeResult.status === 'Completed') {
-      navigate(`/results/${activeResult._id}`);
+      // After a student submits an exam, send them back to the dashboard
+      // instead of showing the detailed result view.
+      if (userInfo?.role === 'Student') {
+        navigate('/dashboard');
+      } else {
+        navigate(`/results/${activeResult._id}`);
+      }
     } else if (!activeResult) {
       dispatch(startExam(examId));
     }
-  }, [dispatch, examId, navigate, activeResult]);
+  }, [dispatch, examId, navigate, activeResult, userInfo]);
 
   // Anti-cheat events
   const postEvent = useCallback(async (type) => {

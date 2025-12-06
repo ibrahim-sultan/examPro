@@ -262,7 +262,6 @@ const StudentDashboardScreen = () => {
                   <th>DATE</th>
                   <th>SCORE</th>
                   <th>STATUS</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -276,13 +275,6 @@ const StudentDashboardScreen = () => {
                     </td>
                     <td>{r.score}</td>
                     <td>{r.status}</td>
-                    <td>
-                      <LinkContainer to={`/results/${r._id}`}>
-                        <Button size="sm" variant="light">
-                          View Result
-                        </Button>
-                      </LinkContainer>
-                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -186,18 +186,19 @@ const getResultById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid result ID' });
     }
 
-    const result = await Result.findById(id)
-      .populate('user', 'name email')
-      .populate({ path: 'exam', select: 'title duration' });
+    // We do not populate the `user` field here because it may point to either a
+    // User or a Student document. Instead, we authorise by comparing raw IDs
+    // and only populate the exam metadata that the frontend needs.
+    const result = await Result.findById(id).populate({ path: 'exam', select: 'title duration' });
 
     if (!result) return res.status(404).json({ message: 'Result not found' });
 
     const currentUser = req.user || {};
-    const isOwner =
-      result.user && currentUser._id && result.user._id.toString() === currentUser._id.toString();
     const role = currentUser.role || '';
     const isAdmin = role === 'Super Admin' || role === 'Moderator';
-    if (!isOwner && !isAdmin) {
+
+    // Only admins can view detailed exam results; students are not allowed
+    if (!isAdmin) {
       return res.status(403).json({ message: 'Not authorized to view this result' });
     }
 
