@@ -166,7 +166,10 @@ const submitExam = async (req, res) => {
     const updatedResult = await result.save();
     res.json(updatedResult);
   } catch (error) {
-    console.error('submitExam error:', error);
+    console.error('submitExam error:', {
+      message: error.message,
+      stack: error.stack,
+    });
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -176,18 +179,34 @@ const submitExam = async (req, res) => {
 // @access  Private
 const getResultById = async (req, res) => {
   try {
-    const result = await Result.findById(req.params.id)
+    const id = req.params.id;
+
+    // Guard against invalid ObjectId strings causing a 500
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'Invalid result ID' });
+    }
+
+    const result = await Result.findById(id)
       .populate('user', 'name email')
       .populate({ path: 'exam', select: 'title duration' });
 
     if (!result) return res.status(404).json({ message: 'Result not found' });
 
-    const isOwner = result.user._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'Super Admin' || req.user.role === 'Moderator';
-    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Not authorized to view this result' });
+    const currentUser = req.user || {};
+    const isOwner =
+      result.user && currentUser._id && result.user._id.toString() === currentUser._id.toString();
+    const role = currentUser.role || '';
+    const isAdmin = role === 'Super Admin' || role === 'Moderator';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized to view this result' });
+    }
 
     res.json(result);
   } catch (error) {
+    console.error('getResultById error:', {
+      message: error.message,
+      stack: error.stack,
+    });
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

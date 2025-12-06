@@ -92,12 +92,19 @@ const ExamTakeScreen = () => {
   if (error) return <Message variant="danger">{error}</Message>;
   if (!activeResult?.exam?.questions) return <Loader />;
 
-  const currentQuestion = activeResult.exam.questions[currentQuestionIndex];
+  const questions = activeResult.exam.questions;
+  const currentQuestion = questions[currentQuestionIndex];
   const qid = currentQuestion._id || currentQuestion.id;
+
+  const goToQuestion = (index) => {
+    if (index >= 0 && index < questions.length) {
+      setCurrentQuestionIndex(index);
+    }
+  };
 
   return (
     <Row className="justify-content-md-center exam-take-shell">
-      <Col md={8}>
+      <Col md={9} lg={8}>
         <Card className="shadow-lg exam-card">
           <Card.Header className="d-flex justify-content-between align-items-center">
             <div>
@@ -128,16 +135,27 @@ const ExamTakeScreen = () => {
             </motion.div>
           </Card.Body>
           <Card.Footer>
-            <Row className="g-2">
-              <Col>
-                <Button variant="outline-secondary" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
+            <Row className="g-2 align-items-center">
+              <Col xs={12} md={6} className="mb-2 mb-md-0">
+                <Button
+                  variant="outline-secondary"
+                  onClick={handlePrevious}
+                  disabled={currentQuestionIndex === 0}
+                >
                   Previous
+                </Button>{' '}
+                <Button
+                  variant="outline-secondary"
+                  onClick={handleNext}
+                  disabled={currentQuestionIndex === questions.length - 1}
+                >
+                  Next
                 </Button>
               </Col>
-              <Col className="text-end">
-                {currentQuestionIndex < activeResult.exam.questions.length - 1 ? (
+              <Col xs={12} md={6} className="text-md-end">
+                {currentQuestionIndex < questions.length - 1 ? (
                   <Button variant="primary" onClick={handleNext}>
-                    Next
+                    Save & Next
                   </Button>
                 ) : (
                   <Button variant="success" onClick={handleSubmit}>
@@ -147,6 +165,49 @@ const ExamTakeScreen = () => {
               </Col>
             </Row>
           </Card.Footer>
+        </Card>
+      </Col>
+      <Col md={3} lg={3} className="mt-3 mt-md-0">
+        <Card className="shadow-sm h-100">
+          <Card.Header>
+            <strong>Question Palette</strong>
+          </Card.Header>
+          <Card.Body>
+            <div className="d-flex flex-wrap gap-2">
+              {questions.map((q, index) => {
+                const id = q._id || q.id;
+                const attempted = answers[id] !== undefined && answers[id] !== null;
+                const isCurrent = index === currentQuestionIndex;
+
+                let variant = 'outline-secondary';
+                if (attempted) variant = 'success';
+                if (!attempted) variant = 'outline-danger';
+                if (isCurrent) variant = 'primary';
+
+                return (
+                  <Button
+                    key={id || index}
+                    size="sm"
+                    variant={variant}
+                    onClick={() => goToQuestion(index)}
+                  >
+                    {index + 1}
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="mt-3 small">
+              <div className="d-flex align-items-center mb-1">
+                <Badge bg="primary" className="me-2">&nbsp;</Badge> Current
+              </div>
+              <div className="d-flex align-items-center mb-1">
+                <Badge bg="success" className="me-2">&nbsp;</Badge> Attempted
+              </div>
+              <div className="d-flex align-items-center">
+                <Badge bg="danger" className="me-2">&nbsp;</Badge> Not Attempted
+              </div>
+            </div>
+          </Card.Body>
         </Card>
       </Col>
     </Row>
