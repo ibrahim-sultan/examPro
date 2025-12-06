@@ -26,10 +26,7 @@ const ExamTakeScreen = () => {
       // After a student submits an exam, send them back to the dashboard
       // instead of showing the detailed result view.
       if (userInfo?.role === 'Student') {
-<<<<<<< HEAD
         window.alert('Your exam has been submitted successfully.');
-=======
->>>>>>> 203c0421ccb22ef29f61bfd648cb51f552759cb7
         navigate('/dashboard');
       } else {
         navigate(`/results/${activeResult._id}`);
