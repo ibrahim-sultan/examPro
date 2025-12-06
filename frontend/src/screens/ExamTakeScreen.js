@@ -43,10 +43,18 @@ const ExamTakeScreen = () => {
     const mismatchedExam =
       !!activeResult && !!examId && !!resultExamId && resultExamId !== examId;
 
-    // If there is no active result yet, or the active result belongs to a different
-    // user/exam (e.g. previous student in the same browser session), always start
-    // a fresh exam session for the current user and exam.
-    if (!activeResult || mismatchedUser || mismatchedExam) {
+    // If the existing activeResult belongs to a different user or a different exam,
+    // start a fresh exam session for this user/exam, but avoid re-dispatching while
+    // a request is already in flight.
+    if (mismatchedUser || mismatchedExam) {
+      if (!loading) {
+        dispatch(startExam(examId));
+      }
+      return;
+    }
+
+    // No active result yet for this user/exam: start one (once).
+    if (!activeResult && !loading && !error) {
       dispatch(startExam(examId));
       return;
     }
@@ -61,7 +69,7 @@ const ExamTakeScreen = () => {
         navigate(`/results/${activeResult._id}`);
       }
     }
-  }, [dispatch, examId, navigate, activeResult, userInfo]);
+  }, [dispatch, examId, navigate, activeResult, userInfo, loading, error]);
 
   // Anti-cheat events
   const postEvent = useCallback(async (type) => {
