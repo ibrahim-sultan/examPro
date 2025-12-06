@@ -231,6 +231,17 @@ const exportResultsCSV = async (req, res) => {
     const { examId } = req.params;
     const results = await Result.find({ exam: examId });
 
+    // Load exam questions so we can safely recompute scores from answers if needed
+    const exam = await Exam.findById(examId).populate('questions');
+    const questionMap = new Map();
+    if (exam && Array.isArray(exam.questions)) {
+      exam.questions.forEach((q) => {
+        if (q && q._id) {
+          questionMap.set(q._id.toString(), q);
+        }
+      });
+    }
+
     // Build a unique list of account IDs referenced by results
     const userIds = Array.from(
       new Set(
@@ -257,10 +268,47 @@ const exportResultsCSV = async (req, res) => {
     for (const r of results) {
       const account = r.user ? accountMap.get(r.user.toString()) : null;
 
+      // Prefer stored score, but if it's missing or clearly wrong while answers exist,
+      // recompute from answers to ensure exported scores are accurate.
+      let effectiveScore = typeof r.score === 'number' && !Number.isNaN(r.score) ? r.score : 0;
+      if (Array.isArray(r.answers) && r.answers.length && questionMap.size) {
+        let recomputed = 0;
+        for (const ans of r.answers) {
+          if (!ans || !ans.question) continue;
+          const q = questionMap.get(ans.question.toString());
+          if (!q || !Array.isArray(q.options)) continue;
+
+          let selectedOriginalIndex = null;
+
+          if (
+            Array.isArray(ans.optionOrder) &&
+            ans.optionOrder.length &&
+            typeof ans.selectedOption === 'number' &&
+            ans.selectedOption >= 0 &&
+            ans.selectedOption < ans.optionOrder.length
+          ) {
+            // Map from displayed index back to original index
+            selectedOriginalIndex = ans.optionOrder[ans.selectedOption];
+          } else if (typeof ans.selectedOption === 'number') {
+            // Fallback for legacy data where selectedOption already stored original index
+            selectedOriginalIndex = ans.selectedOption;
+          }
+
+          if (
+            selectedOriginalIndex !== null &&
+            typeof q.correctOption === 'number' &&
+            selectedOriginalIndex === q.correctOption
+          ) {
+            recomputed += 1;
+          }
+        }
+        effectiveScore = recomputed;
+      }
+
       rows.push([
         account?.name || '',
         account?.email || '',
-        r.score ?? 0,
+        effectiveScore,
         r.status,
         r.startTime ? new Date(r.startTime).toISOString() : '',
         r.submittedAt ? new Date(r.submittedAt).toISOString() : '',
