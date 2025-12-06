@@ -176,7 +176,11 @@ const submitExam = async (req, res) => {
 
 // @desc    Get a single result by ID
 // @route   GET /api/results/:id
+<<<<<<< HEAD
 // @access  Private/Admin (students cannot view detailed results)
+=======
+// @access  Private
+>>>>>>> 203c0421ccb22ef29f61bfd648cb51f552759cb7
 const getResultById = async (req, res) => {
   try {
     const id = req.params.id;
