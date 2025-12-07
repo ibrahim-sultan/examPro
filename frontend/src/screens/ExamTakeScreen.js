@@ -131,9 +131,32 @@ const ExamTakeScreen = () => {
 
   const onTimeUp = () => dispatch(submitExam({ resultId: activeResult._id, answers }));
 
+  // Show loader only while we are still fetching the exam for the first time.
   if (loading && !activeResult) return <Loader />;
+
+  // Surface any backend or network error clearly to the student.
   if (error) return <Message variant="danger">{error}</Message>;
-  if (!activeResult?.exam?.questions) return <Loader />;
+
+  // If we got a response but no activeResult at all, fail gracefully instead of
+  // spinning forever.
+  if (!activeResult) {
+    return (
+      <Message variant="danger">
+        Unable to start this exam right now. Please refresh the page or contact your
+        administrator.
+      </Message>
+    );
+  }
+
+  // If the exam has no questions configured, show a clear message rather than an
+  // infinite loader.
+  if (!Array.isArray(activeResult.exam?.questions) || activeResult.exam.questions.length === 0) {
+    return (
+      <Message variant="warning">
+        This exam has no questions configured yet. Please inform your administrator.
+      </Message>
+    );
+  }
 
   const questions = activeResult.exam.questions;
   const currentQuestion = questions[currentQuestionIndex];
