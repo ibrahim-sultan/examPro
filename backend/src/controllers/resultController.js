@@ -25,29 +25,44 @@ const startExam = async (req, res) => {
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Check if user has already started this exam
-    const existingResult = await Result.findOne({ exam: examId, user: userId });
+    // Check if user has an existing session for this exam
+    const existingResult = await Result.findOne({ exam: examId, user: userId }).sort({ createdAt: -1 });
     if (existingResult) {
+      // If the previous session is still in progress and within time, resume it.
       if (existingResult.status === 'In Progress') {
-        // Reconstruct display options from saved optionOrder
-        const examObj = exam.toObject();
-        const answersMap = new Map(existingResult.answers.map((a) => [a.question.toString(), a.optionOrder]));
-        let questions = examObj.questions;
-        // Preserve question order using the order in answers
-        if (existingResult.answers?.length) {
-          const order = existingResult.answers.map((a) => a.question.toString());
-          const mapQ = new Map(questions.map((q) => [q._id.toString(), q]));
-          questions = order.map((id) => mapQ.get(id)).filter(Boolean);
+        const elapsedMinutes = (Date.now() - new Date(existingResult.startTime).getTime()) / (1000 * 60);
+        if (elapsedMinutes <= exam.duration) {
+          // Reconstruct display options from saved optionOrder
+          const examObj = exam.toObject();
+          const answersMap = new Map(
+            existingResult.answers.map((a) => [a.question.toString(), a.optionOrder])
+          );
+          let questions = examObj.questions;
+          // Preserve question order using the order in answers
+          if (existingResult.answers?.length) {
+            const order = existingResult.answers.map((a) => a.question.toString());
+            const mapQ = new Map(questions.map((q) => [q._id.toString(), q]));
+            questions = order.map((id) => mapQ.get(id)).filter(Boolean);
+          }
+          const sanitizedQuestions = questions.map((q) => {
+            const { correctOption, options, ...rest } = q;
+            const order = answersMap.get(q._id.toString()) || [...options.keys?.()];
+            const displayed = Array.isArray(order) ? order.map((idx) => options[idx]) : options;
+            return { ...rest, options: displayed };
+          });
+          return res.json({
+            ...existingResult.toObject(),
+            exam: { ...examObj, questions: sanitizedQuestions },
+          });
         }
-        const sanitizedQuestions = questions.map((q) => {
-          const { correctOption, options, ...rest } = q;
-          const order = answersMap.get(q._id.toString()) || [...options.keys?.()];
-          const displayed = Array.isArray(order) ? order.map((idx) => options[idx]) : options;
-          return { ...rest, options: displayed };
-        });
-        return res.json({ ...existingResult.toObject(), exam: { ...examObj, questions: sanitizedQuestions } });
+        // If time for the previous session has elapsed, mark it completed and fall
+        // through to create a fresh attempt (if still within exam window).
+        existingResult.status = 'Completed';
+        existingResult.submittedAt = new Date();
+        await existingResult.save();
       }
-      return res.status(400).json({ message: 'You have already completed this exam.' });
+      // If the last session is already completed or expired, we allow the student
+      // to start a new attempt.
     }
 
     // New session: build answers skeleton with per-question option order
