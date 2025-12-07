@@ -7,16 +7,16 @@ const Student = require('../models/studentModel');
 const Question = require('../models/questionModel');
 
 
-// ------------------------------
+// ============================
 // Multer Memory Storage
-// ------------------------------
+// ============================
 const storage = multer.memoryStorage();
 exports.upload = multer({ storage });
 
 
-// ------------------------------
-// Helper: Read Sheet Rows
-// ------------------------------
+// ============================
+// Helper: Read Excel Sheet
+// ============================
 const readRows = (buffer) => {
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -24,10 +24,10 @@ const readRows = (buffer) => {
 };
 
 
-// ============================================================================
-//  UPLOAD QUESTIONS  (Supports text answers + numeric answers)
-// ============================================================================
 
+// ============================================================================
+//  UPLOAD QUESTIONS  (supports text, number, A–D, option1–4)
+// ============================================================================
 exports.uploadQuestions = async (req, res) => {
   try {
     if (!req.file) {
@@ -39,7 +39,7 @@ exports.uploadQuestions = async (req, res) => {
 
     for (const r of rows) {
 
-      // Normalize options
+      // Collect options
       const options = [
         r.option1,
         r.option2,
@@ -47,16 +47,37 @@ exports.uploadQuestions = async (req, res) => {
         r.option4
       ].filter(v => v !== '' && v !== undefined && v !== null);
 
-      // Normalize correctOption input
-      const raw = String(r.correctOption || '').trim().toLowerCase();
-      let correctIndex = 0; // default to option1
+      // Normalize the raw correctOption
+      let raw = String(r.correctOption || '').trim().toLowerCase();
+      let correctIndex = 0; // default = option1
 
-      // 1) If user enters a NUMBER (1–4)
+
+
+      // ---------------------------------------------------------------
+      // A) If user enters 1, 2, 3, 4
+      // ---------------------------------------------------------------
       if (/^[1-4]$/.test(raw)) {
         correctIndex = Number(raw) - 1;
       }
 
-      // 2) If user enters the ANSWER TEXT (e.g., "tinubu")
+      // ---------------------------------------------------------------
+      // B) If user enters A, B, C, D
+      // ---------------------------------------------------------------
+      else if (['a','b','c','d'].includes(raw)) {
+        correctIndex = raw.charCodeAt(0) - 97;   // a=0, b=1, c=2, d=3
+      }
+
+      // ---------------------------------------------------------------
+      // C) If user enters option1, option2, option3, option4
+      // ---------------------------------------------------------------
+      else if (/^option[1-4]$/.test(raw)) {
+        const num = Number(raw.replace('option', ''));
+        correctIndex = num - 1;
+      }
+
+      // ---------------------------------------------------------------
+      // D) If user enters actual text of the correct option
+      // ---------------------------------------------------------------
       else {
         const matchIndex = options.findIndex(
           opt => String(opt).trim().toLowerCase() === raw
@@ -67,10 +88,13 @@ exports.uploadQuestions = async (req, res) => {
         }
       }
 
-      // Safety: ensure correctIndex within valid range
+
+
+      // Safety: Ensure the index is valid
       if (correctIndex < 0 || correctIndex >= options.length) {
-        correctIndex = 0; // fallback to option1
+        correctIndex = 0;  // fallback to option1
       }
+
 
       docs.push({
         subject: r.subject,
@@ -99,9 +123,8 @@ exports.uploadQuestions = async (req, res) => {
 
 
 // ============================================================================
-//  UPLOAD STUDENTS (unchanged but improved readability)
+//  UPLOAD STUDENTS (clean & improved)
 // ============================================================================
-
 exports.uploadStudents = async (req, res) => {
   try {
     if (!req.file) {
@@ -112,6 +135,7 @@ exports.uploadStudents = async (req, res) => {
     const ops = [];
 
     for (const r of rows) {
+
       const plainPassword = r.password || 'ChangeMe123!';
       const hashedPassword = await bcrypt.hash(String(plainPassword), 10);
 
