@@ -28,15 +28,16 @@ const ExamTakeScreen = () => {
       return;
     }
 
-    const currentUserId = userInfo._id;
-    const resultUserId =
-      activeResult && activeResult.user && activeResult.user.toString
-        ? activeResult.user.toString()
-        : activeResult?.user;
-    const resultExamId =
-      activeResult && activeResult.exam && activeResult.exam.toString
-        ? activeResult.exam.toString()
+    const currentUserId = userInfo._id && userInfo._id.toString ? userInfo._id.toString() : userInfo._id;
+
+    // Normalise IDs to plain strings for safe comparison. activeResult.user/exam
+    // may be ObjectIds, strings, or populated objects.
+    const resultUserId = activeResult?.user ? String(activeResult.user) : null;
+    const rawExamRef =
+      activeResult && typeof activeResult.exam === 'object' && activeResult.exam !== null
+        ? activeResult.exam._id || activeResult.exam.id || activeResult.exam
         : activeResult?.exam;
+    const resultExamId = rawExamRef ? String(rawExamRef) : null;
 
     const mismatchedUser =
       !!activeResult && !!currentUserId && !!resultUserId && resultUserId !== currentUserId;
