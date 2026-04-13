@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: exampro
+    env: node
+    buildCommand: |
+      npm --prefix backend ci || npm --prefix backend install
+      npm --prefix frontend ci || npm --prefix frontend install
+      npm --prefix frontend run build
+    startCommand: |
+      cd backend
+      node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20
+      - key: REACT_APP_API_URL
+        value: https://exampro-ysox.onrender.com
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
