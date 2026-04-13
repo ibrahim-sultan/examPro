@@ -28,7 +28,10 @@ const startExam = async (req, res) => {
     // Check if user has an existing session for this exam
     const existingResult = await Result.findOne({ exam: examId, user: userId }).sort({ createdAt: -1 });
     if (existingResult) {
-      // If the previous session is still in progress and within time, resume it.
+      if (existingResult.status === 'Completed') {
+        return res.status(400).json({ message: 'You have already completed this exam. Only one attempt is allowed.' });
+      }
+
       if (existingResult.status === 'In Progress') {
         const elapsedMinutes = (Date.now() - new Date(existingResult.startTime).getTime()) / (1000 * 60);
         if (elapsedMinutes <= exam.duration) {
@@ -55,14 +58,16 @@ const startExam = async (req, res) => {
             exam: { ...examObj, questions: sanitizedQuestions },
           });
         }
-        // If time for the previous session has elapsed, mark it completed and fall
-        // through to create a fresh attempt (if still within exam window).
+
         existingResult.status = 'Completed';
         existingResult.submittedAt = new Date();
         await existingResult.save();
+
+        return res.status(400).json({
+          message: 'Your previous exam session has expired. Only one attempt is allowed.',
+        });
       }
-      // If the last session is already completed or expired, we allow the student
-      // to start a new attempt.
+      // If the last session is already completed or otherwise final, do not allow a new attempt.
     }
 
     // New session: build answers skeleton with per-question option order

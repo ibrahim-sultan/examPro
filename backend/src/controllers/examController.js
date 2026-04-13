@@ -157,10 +157,18 @@ const getAvailableExams = async (req, res) => {
     const student = req.user;
     const now = new Date();
 
+    const completedResults = await Result.find({
+      user: student._id,
+      status: 'Completed',
+    }).select('exam');
+
+    const completedExamIds = completedResults.map((result) => result.exam.toString());
+
     const exams = await Exam.find({
       status: 'Published',
       startTime: { $lte: now },
       endTime: { $gte: now },
+      _id: { $nin: completedExamIds },
       // Exam is available if it has no assigned groups (public)
       // OR if the student is in one of the assigned groups.
       $or: [

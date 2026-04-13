@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Row, Col, Card, Button, Table, Form } from 'react-bootstrap';
+import { Row, Col, Card, Button, Table, Form, Badge } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
 import { listAvailableExams } from '../store/slices/examSlice';
@@ -13,7 +13,9 @@ import API_BASE_URL from '../config/api';
 const StudentDashboardScreen = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userInfo } = useSelector((state) => state.user);
+  const submittedSuccess = location.state?.submitted;
   const examState = useSelector((state) => state.exam) || {};
   const { exams: availableExams = [], error: examError = null, loading: examLoading = false } = examState;
 
@@ -105,9 +107,16 @@ const StudentDashboardScreen = () => {
     }
   };
 
-  // Show all published exams as "upcoming" regardless of date/time.
-  // Time gating for when an exam can actually be started is handled in the UI below.
-  const upcomingExams = useMemo(() => availableExams, [availableExams]);
+  // Show all published exams as "upcoming" regardless of date/time,
+  // but hide any exam that this student has already completed.
+  const completedExamIds = useMemo(
+    () => new Set(results.filter((r) => r.status === 'Completed' && r.exam?._id).map((r) => r.exam._id)),
+    [results]
+  );
+  const upcomingExams = useMemo(
+    () => availableExams.filter((exam) => !completedExamIds.has(exam._id)),
+    [availableExams, completedExamIds]
+  );
   const completedExams = useMemo(() => results, [results]);
 
   return (
@@ -178,6 +187,15 @@ const StudentDashboardScreen = () => {
         </Col>
       </Row>
 
+      {submittedSuccess && (
+        <Row className="mb-3">
+          <Col>
+            <Message variant="success">
+              Your exam has been submitted successfully. Completed exams are now hidden from upcoming exams.
+            </Message>
+          </Col>
+        </Row>
+      )}
       <Row className="mb-4">
         <Col>
           <h3>Upcoming Exams</h3>
@@ -260,7 +278,6 @@ const StudentDashboardScreen = () => {
                 <tr>
                   <th>TITLE</th>
                   <th>DATE</th>
-                  <th>SCORE</th>
                   <th>STATUS</th>
                 </tr>
               </thead>
@@ -273,8 +290,11 @@ const StudentDashboardScreen = () => {
                         ? new Date(r.submittedAt).toLocaleDateString()
                         : '-'}
                     </td>
-                    <td>{r.score}</td>
-                    <td>{r.status}</td>
+                    <td>
+                      <Badge bg="success" pill>
+                        {r.status}
+                      </Badge>
+                    </td>
                   </tr>
                 ))}
               </tbody>
