@@ -103,7 +103,13 @@ const getUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/users/:id
 // @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password');
+  // Try User model first
+  let user = await User.findById(req.params.id).select('-password');
+  if (!user) {
+    // If not found, try Student model
+    user = await Student.findById(req.params.id).select('-password');
+  }
+
   if (user) {
     res.json(user);
   } else {
@@ -116,12 +122,21 @@ const getUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  // Try User model first
+  let user = await User.findById(req.params.id);
+  let Model = User;
+  if (!user) {
+    // If not found, try Student model
+    user = await Student.findById(req.params.id);
+    Model = Student;
+  }
 
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-    user.isAdmin = req.body.isAdmin;
+    if (Model === User) {
+      user.isAdmin = req.body.isAdmin !== undefined ? req.body.isAdmin : user.isAdmin;
+    }
 
     const updatedUser = await user.save();
 
@@ -129,7 +144,8 @@ const updateUser = asyncHandler(async (req, res) => {
       _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
+      isAdmin: updatedUser.isAdmin || false,
+      role: updatedUser.role,
     });
   } else {
     res.status(404);
@@ -141,28 +157,47 @@ const updateUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  // Try to find in User model first
+  let account = await User.findById(req.params.id);
+  let accountType = 'User';
 
-  if (user) {
-    // Add logic here to prevent self-deletion if needed
-    if (user._id.toString() === req.user._id.toString()) {
-      res.status(400);
-      throw new Error('Admin cannot delete themselves');
-    }
-    await user.deleteOne();
-    res.json({ message: 'User removed' });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
+  if (!account) {
+    // If not found in User, try Student model
+    account = await Student.findById(req.params.id);
+    accountType = 'Student';
   }
+
+  if (!account) {
+    res.status(404);
+    throw new Error('Account not found');
+  }
+
+  // Prevent self-deletion
+  if (account._id.toString() === req.user._id.toString()) {
+    res.status(400);
+    throw new Error('Admin cannot delete themselves');
+  }
+
+  await account.deleteOne();
+  res.json({ message: `${accountType} removed` });
 });
 
 // @desc    Get my subjects
 // @route   GET /api/users/subjects
 // @access  Private
 const getMySubjects = asyncHandler(async (req, res) => {
-  const Model = req.user.role === 'Student' ? Student : User;
-  const doc = await Model.findById(req.user._id).select('subjects');
+  // Try Student model first if role is Student, else User
+  let Model = User;
+  if (req.user.role === 'Student') {
+    Model = Student;
+  }
+
+  let doc = await Model.findById(req.user._id).select('subjects');
+  if (!doc && req.user.role === 'Student') {
+    // Fallback: if not found in Student, try User (for legacy students created as users)
+    doc = await User.findById(req.user._id).select('subjects');
+  }
+
   res.json(doc?.subjects || []);
 });
 
@@ -176,8 +211,19 @@ const updateMySubjects = asyncHandler(async (req, res) => {
     throw new Error('subjects must be an array of strings');
   }
 
-  const Model = req.user.role === 'Student' ? Student : User;
-  const doc = await Model.findById(req.user._id);
+  // Try Student model first if role is Student, else User
+  let Model = User;
+  if (req.user.role === 'Student') {
+    Model = Student;
+  }
+
+  let doc = await Model.findById(req.user._id);
+  if (!doc && req.user.role === 'Student') {
+    // Fallback: if not found in Student, try User
+    Model = User;
+    doc = await User.findById(req.user._id);
+  }
+
   if (!doc) {
     res.status(404);
     throw new Error('User not found');
