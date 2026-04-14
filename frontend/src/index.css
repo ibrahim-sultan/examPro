@@ -4,6 +4,15 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 code {
@@ -19,12 +28,15 @@ code {
 .footer-glass {
   background: linear-gradient(90deg, rgba(2,6,23,0.95), rgba(17,24,39,0.9));
   border-top: 1px solid rgba(255,255,255,0.06);
-  /* Use static positioning so the footer no longer overlaps form buttons */
+  margin-top: auto;
   width: 100%;
   z-index: 100;
 }
 /* Add bottom padding so content has breathing room above the footer */
-main { padding-bottom: 48px; }
+main { 
+  flex: 1;
+  padding-bottom: 24px;
+}
 
 .brand-gradient {
   background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);

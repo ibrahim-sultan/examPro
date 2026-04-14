@@ -81,13 +81,13 @@ const AppShell = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {!isAdminPath && <Header />}
-      <main className="py-3">
+      <main className="py-3" style={{ flex: 1 }}>
         <AppRoutes />
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 

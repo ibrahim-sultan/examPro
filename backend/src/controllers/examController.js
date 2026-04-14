@@ -157,8 +157,20 @@ const getAvailableExams = async (req, res) => {
     const student = req.user;
     const now = new Date();
 
-    const studentGroups = Array.isArray(student.groups) ? student.groups : [];
+    const studentGroups = Array.isArray(student.groups) && student.groups.length > 0 
+      ? student.groups 
+      : [];
     
+    // Build query filter
+    const orConditions = [
+      { assignedGroups: { $exists: false } },
+      { assignedGroups: { $size: 0 } },
+    ];
+    
+    if (studentGroups.length > 0) {
+      orConditions.push({ assignedGroups: { $in: studentGroups } });
+    }
+
     // Use separate queries for better performance
     const [completedResults, exams] = await Promise.all([
       Result.find({ user: student._id, status: 'Completed' }).select('exam').lean(),
@@ -166,11 +178,7 @@ const getAvailableExams = async (req, res) => {
         status: 'Published',
         startTime: { $lte: now },
         endTime: { $gte: now },
-        $or: [
-          { assignedGroups: { $exists: false } },
-          { assignedGroups: { $size: 0 } },
-          ...(studentGroups.length > 0 ? [{ assignedGroups: { $in: studentGroups } }] : [])
-        ],
+        $or: orConditions,
       }).select('-questions -markingScheme -createdBy').lean()
     ]);
 
