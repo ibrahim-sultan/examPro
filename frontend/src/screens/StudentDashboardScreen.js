@@ -5,7 +5,6 @@ import { LinkContainer } from 'react-router-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
-import { listAvailableExams } from '../store/slices/examSlice';
 import { logout } from '../store/slices/userSlice';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
@@ -16,8 +15,6 @@ const StudentDashboardScreen = () => {
   const location = useLocation();
   const { userInfo } = useSelector((state) => state.user);
   const submittedSuccess = location.state?.submitted;
-  const examState = useSelector((state) => state.exam) || {};
-  const { exams: availableExams = [], error: examError = null, loading: examLoading = false } = examState;
 
   const [allSubjects, setAllSubjects] = useState([]);
   const [mySubjects, setMySubjects] = useState([]);
@@ -29,6 +26,10 @@ const StudentDashboardScreen = () => {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState(null);
 
+  const [availableExams, setAvailableExams] = useState([]);
+  const [examsLoading, setExamsLoading] = useState(false);
+  const [examsError, setExamsError] = useState(null);
+
   useEffect(() => {
     if (!userInfo) {
       navigate('/login');
@@ -38,8 +39,10 @@ const StudentDashboardScreen = () => {
     const loadAllData = async () => {
       setSubjectsLoading(true);
       setResultsLoading(true);
+      setExamsLoading(true);
       setSubjectsError(null);
       setResultsError(null);
+      setExamsError(null);
 
       try {
         const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
@@ -48,9 +51,10 @@ const StudentDashboardScreen = () => {
           axios.get(`${API_BASE_URL}/api/questions/subjects`, config),
           axios.get(`${API_BASE_URL}/api/users/subjects`, config),
           axios.get(`${API_BASE_URL}/api/results/my`, config),
-          (() => dispatch(listAvailableExams()))(),
+          axios.get(`${API_BASE_URL}/api/exams/available`, config),
         ]);
 
+        // Handle subjects
         if (subjRes.status === 'fulfilled') {
           setAllSubjects(subjRes.value.data || []);
         } else {
@@ -58,30 +62,43 @@ const StudentDashboardScreen = () => {
           setSubjectsError(subjRes.reason?.response?.data?.message || 'Failed to load subjects');
         }
 
+        // Handle my subjects
         if (mySubjRes.status === 'fulfilled') {
           setMySubjects(mySubjRes.value.data || []);
         } else {
           console.error('Failed to load my subjects:', mySubjRes.reason);
-          setSubjectsError(mySubjRes.reason?.response?.data?.message || 'Failed to load my subjects');
+          if (!subjectsError) {
+            setSubjectsError(mySubjRes.reason?.response?.data?.message || 'Failed to load my subjects');
+          }
         }
 
+        // Handle results
         if (resultsRes.status === 'fulfilled') {
-          setResults(resultsRes.value.data || []);
+          setResults(Array.isArray(resultsRes.value.data) ? resultsRes.value.data : []);
         } else {
           console.error('Failed to load results:', resultsRes.reason);
           setResultsError(resultsRes.reason?.response?.data?.message || 'Failed to load results');
         }
+
+        // Handle exams
+        if (examsRes.status === 'fulfilled') {
+          setAvailableExams(Array.isArray(examsRes.value.data) ? examsRes.value.data : []);
+        } else {
+          console.error('Failed to load exams:', examsRes.reason);
+          setExamsError(examsRes.reason?.response?.data?.message || 'Failed to load available exams');
+        }
       } catch (error) {
-        console.error('Error in loadAllData:', error);
+        console.error('Unexpected error in loadAllData:', error);
         setSubjectsError('An unexpected error occurred');
       } finally {
         setSubjectsLoading(false);
         setResultsLoading(false);
+        setExamsLoading(false);
       }
     };
 
     loadAllData();
-  }, [dispatch, userInfo, navigate]);
+  }, [userInfo, navigate]);
 
   const onLogout = () => {
     dispatch(logout());
@@ -129,7 +146,7 @@ const StudentDashboardScreen = () => {
   const completedExams = useMemo(() => results, [results]);
 
   // Early error fallback UI
-  if (examError && !examLoading && availableExams.length === 0 && subjectsLoading === false && resultsLoading === false) {
+  if (examsError && !examsLoading && availableExams.length === 0 && !subjectsLoading && !resultsLoading) {
     return (
       <div>
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -138,7 +155,7 @@ const StudentDashboardScreen = () => {
             Logout
           </Button>
         </div>
-        <Message variant="danger">{examError}</Message>
+        <Message variant="danger">{examsError}</Message>
         <p className="mt-3 text-muted">Unable to load your exams. Please try refreshing the page.</p>
       </div>
     );
@@ -224,10 +241,10 @@ const StudentDashboardScreen = () => {
       <Row className="mb-4">
         <Col>
           <h3>Upcoming Exams</h3>
-          {examLoading ? (
+          {examsLoading ? (
             <Loader />
-          ) : examError ? (
-            <Message variant="danger">{examError}</Message>
+          ) : examsError ? (
+            <Message variant="danger">{examsError}</Message>
           ) : upcomingExams.length === 0 ? (
             <p>No upcoming exams.</p>
           ) : (
