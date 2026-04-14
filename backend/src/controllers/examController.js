@@ -157,29 +157,27 @@ const getAvailableExams = async (req, res) => {
     const student = req.user;
     const now = new Date();
 
-    const completedResults = await Result.find({
-      user: student._id,
-      status: 'Completed',
-    }).select('exam');
-
-    const completedExamIds = completedResults.map((result) => result.exam.toString());
     const studentGroups = Array.isArray(student.groups) ? student.groups : [];
+    
+    // Use separate queries for better performance
+    const [completedResults, exams] = await Promise.all([
+      Result.find({ user: student._id, status: 'Completed' }).select('exam').lean(),
+      Exam.find({
+        status: 'Published',
+        startTime: { $lte: now },
+        endTime: { $gte: now },
+        $or: [
+          { assignedGroups: { $exists: false } },
+          { assignedGroups: { $size: 0 } },
+          ...(studentGroups.length > 0 ? [{ assignedGroups: { $in: studentGroups } }] : [])
+        ],
+      }).select('-questions -markingScheme -createdBy').lean()
+    ]);
 
-    const exams = await Exam.find({
-      status: 'Published',
-      startTime: { $lte: now },
-      endTime: { $gte: now },
-      _id: { $nin: completedExamIds },
-      // Exam is available if it has no assigned groups (public)
-      // OR if the student is in one of the assigned groups.
-      $or: [
-        { assignedGroups: { $exists: false } },
-        { assignedGroups: { $size: 0 } },
-        studentGroups.length > 0 ? { assignedGroups: { $in: studentGroups } } : { _id: null }, // _id: null ensures this clause never matches if no groups
-      ],
-    }).select('-questions -markingScheme -createdBy'); // Exclude sensitive data
+    const completedExamIds = new Set(completedResults.map((result) => result.exam.toString()));
+    const availableExams = exams.filter(exam => !completedExamIds.has(exam._id.toString()));
 
-    res.json(exams);
+    res.json(availableExams);
   } catch (error) {
     console.error('getAvailableExams error:', error);
     res.status(500).json({ message: 'Server Error', details: error.message });

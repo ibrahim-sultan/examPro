@@ -376,10 +376,21 @@ const getExamAnalytics = async (req, res) => {
 // My results (student)
 const getMyResults = async (req, res) => {
   try {
-    const results = await Result.find({ user: req.user._id }).select('-answers').populate('exam', 'title');
-    res.json(results);
+    const results = await Result.find({ user: req.user._id })
+      .select('-answers')
+      .populate({
+        path: 'exam',
+        select: 'title subject',
+        options: { strictPopulate: false }
+      })
+      .lean()
+      .sort({ submittedAt: -1, createdAt: -1 });
+    
+    const validResults = results.filter(r => r.exam !== null);
+    res.json(validResults || []);
   } catch (e) {
-    res.status(500).json({ message: 'Server Error' });
+    console.error('getMyResults error:', e.message);
+    res.status(500).json({ message: 'Server Error', details: e.message });
   }
 };
 

@@ -34,48 +34,54 @@ const StudentDashboardScreen = () => {
       navigate('/login');
       return;
     }
-    // Load exams available to this student; time gating and groups are enforced on the backend
-    dispatch(listAvailableExams());
-    loadSubjects();
-    loadResults();
-  }, [dispatch, navigate, userInfo]);
 
-  const loadSubjects = async () => {
-    try {
+    const loadAllData = async () => {
       setSubjectsLoading(true);
-      setSubjectsError(null);
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const [subjRes, mySubjRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/questions/subjects`, config),
-        axios.get(`${API_BASE_URL}/api/users/subjects`, config),
-      ]);
-      setAllSubjects(subjRes.data || []);
-      setMySubjects(mySubjRes.data || []);
-    } catch (e) {
-      setSubjectsError(e.response?.data?.message || e.message);
-    } finally {
-      setSubjectsLoading(false);
-    }
-  };
-
-  const loadResults = async () => {
-    try {
       setResultsLoading(true);
+      setSubjectsError(null);
       setResultsError(null);
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(`${API_BASE_URL}/api/results/my`, config);
-      setResults(data || []);
-    } catch (e) {
-      setResultsError(e.response?.data?.message || e.message);
-    } finally {
-      setResultsLoading(false);
-    }
-  };
 
-  const onLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
+      try {
+        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+        const [subjRes, mySubjRes, resultsRes, examsRes] = await Promise.allSettled([
+          axios.get(`${API_BASE_URL}/api/questions/subjects`, config),
+          axios.get(`${API_BASE_URL}/api/users/subjects`, config),
+          axios.get(`${API_BASE_URL}/api/results/my`, config),
+          (() => dispatch(listAvailableExams()))(),
+        ]);
+
+        if (subjRes.status === 'fulfilled') {
+          setAllSubjects(subjRes.value.data || []);
+        } else {
+          console.error('Failed to load subjects:', subjRes.reason);
+          setSubjectsError(subjRes.reason?.response?.data?.message || 'Failed to load subjects');
+        }
+
+        if (mySubjRes.status === 'fulfilled') {
+          setMySubjects(mySubjRes.value.data || []);
+        } else {
+          console.error('Failed to load my subjects:', mySubjRes.reason);
+          setSubjectsError(mySubjRes.reason?.response?.data?.message || 'Failed to load my subjects');
+        }
+
+        if (resultsRes.status === 'fulfilled') {
+          setResults(resultsRes.value.data || []);
+        } else {
+          console.error('Failed to load results:', resultsRes.reason);
+          setResultsError(resultsRes.reason?.response?.data?.message || 'Failed to load results');
+        }
+      } catch (error) {
+        console.error('Error in loadAllData:', error);
+        setSubjectsError('An unexpected error occurred');
+      } finally {
+        setSubjectsLoading(false);
+        setResultsLoading(false);
+      }
+    };
+
+    loadAllData();
+  }, [dispatch, userInfo, navigate]);
 
   const toggleSubject = (subject) => {
     setMySubjects((prev) =>
@@ -107,8 +113,6 @@ const StudentDashboardScreen = () => {
     }
   };
 
-  // Show all published exams as "upcoming" regardless of date/time,
-  // but hide any exam that this student has already completed.
   const completedExamIds = useMemo(
     () => new Set(results.filter((r) => r.status === 'Completed' && r.exam?._id).map((r) => r.exam._id)),
     [results]
@@ -118,6 +122,22 @@ const StudentDashboardScreen = () => {
     [availableExams, completedExamIds]
   );
   const completedExams = useMemo(() => results, [results]);
+
+  // Early error fallback UI
+  if (examError && !examLoading && availableExams.length === 0 && subjectsLoading === false && resultsLoading === false) {
+    return (
+      <div>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h1 className="m-0">Student Dashboard</h1>
+          <Button variant="outline-danger" onClick={onLogout}>
+            Logout
+          </Button>
+        </div>
+        <Message variant="danger">{examError}</Message>
+        <p className="mt-3 text-muted">Unable to load your exams. Please try refreshing the page.</p>
+      </div>
+    );
+  }
 
   return (
     <div>

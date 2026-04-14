@@ -23,10 +23,12 @@ const examSchema = mongoose.Schema(
     startTime: {
       type: Date,
       required: true,
+      index: true,
     },
     endTime: {
       type: Date,
       required: true,
+      index: true,
     },
     questions: [
       {
