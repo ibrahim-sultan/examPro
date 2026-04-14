@@ -83,6 +83,11 @@ const StudentDashboardScreen = () => {
     loadAllData();
   }, [dispatch, userInfo, navigate]);
 
+  const onLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
+
   const toggleSubject = (subject) => {
     setMySubjects((prev) =>
       prev.includes(subject)
