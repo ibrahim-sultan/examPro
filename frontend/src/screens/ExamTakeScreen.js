@@ -10,6 +10,17 @@ import Timer from '../components/Timer';
 import { motion } from 'framer-motion';
 import { startExam, submitExam } from '../store/slices/resultSlice';
 
+const normalizeEntityId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return value._id.toString();
+    if (value.id) return value.id.toString();
+    if (typeof value.toString === 'function') return value.toString();
+  }
+  return String(value);
+};
+
 const ExamTakeScreen = () => {
   const { id: examId } = useParams();
   const navigate = useNavigate();
@@ -28,16 +39,9 @@ const ExamTakeScreen = () => {
       return;
     }
 
-    const currentUserId = userInfo._id && userInfo._id.toString ? userInfo._id.toString() : userInfo._id;
-
-    // Normalise IDs to plain strings for safe comparison. activeResult.user/exam
-    // may be ObjectIds, strings, or populated objects.
-    const resultUserId = activeResult?.user ? String(activeResult.user) : null;
-    const rawExamRef =
-      activeResult && typeof activeResult.exam === 'object' && activeResult.exam !== null
-        ? activeResult.exam._id || activeResult.exam.id || activeResult.exam
-        : activeResult?.exam;
-    const resultExamId = rawExamRef ? String(rawExamRef) : null;
+    const currentUserId = normalizeEntityId(userInfo._id || userInfo.id);
+    const resultUserId = normalizeEntityId(activeResult?.user);
+    const resultExamId = normalizeEntityId(activeResult?.exam);
 
     const mismatchedUser =
       !!activeResult && !!currentUserId && !!resultUserId && resultUserId !== currentUserId;

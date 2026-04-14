@@ -17,6 +17,13 @@ exports.upload = multer({ storage });
 // ============================
 // Helper: Read Excel Sheet
 // ============================
+const normalizeValue = (value) => String(value || '').trim();
+const makeQuestionKey = (subject, questionText, options, correctIndex) => {
+  return `${normalizeValue(subject)}|${normalizeValue(questionText)}|${options
+    .map((opt) => normalizeValue(opt))
+    .join('|')}|${correctIndex}`;
+};
+
 const readRows = (buffer) => {
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -36,82 +43,105 @@ exports.uploadQuestions = async (req, res) => {
 
     const rows = readRows(req.file.buffer);
     const docs = [];
+    const seen = new Set();
 
     for (const r of rows) {
+      const subject = normalizeValue(r.subject);
+      const questionText = normalizeValue(r.questionText || r.question || r.text);
+      const options = [r.option1, r.option2, r.option3, r.option4]
+        .map(normalizeValue)
+        .filter((opt) => opt.length > 0);
+      const explanation = normalizeValue(r.explanation);
 
-      // Collect options
-      const options = [
-        r.option1,
-        r.option2,
-        r.option3,
-        r.option4
-      ].filter(v => v !== '' && v !== undefined && v !== null);
+      if (!subject || !questionText || options.length < 2) {
+        continue;
+      }
 
-      // Normalize the raw correctOption
-      let raw = String(r.correctOption || '').trim().toLowerCase();
-      let correctIndex = 0; // default = option1
+      let raw = normalizeValue(r.correctOption).toLowerCase();
+      let correctIndex = 0;
 
-
-
-      // ---------------------------------------------------------------
-      // A) If user enters 1, 2, 3, 4
-      // ---------------------------------------------------------------
       if (/^[1-4]$/.test(raw)) {
         correctIndex = Number(raw) - 1;
-      }
-
-      // ---------------------------------------------------------------
-      // B) If user enters A, B, C, D
-      // ---------------------------------------------------------------
-      else if (['a','b','c','d'].includes(raw)) {
-        correctIndex = raw.charCodeAt(0) - 97;   // a=0, b=1, c=2, d=3
-      }
-
-      // ---------------------------------------------------------------
-      // C) If user enters option1, option2, option3, option4
-      // ---------------------------------------------------------------
-      else if (/^option[1-4]$/.test(raw)) {
+      } else if (['a', 'b', 'c', 'd'].includes(raw)) {
+        correctIndex = raw.charCodeAt(0) - 97;
+      } else if (/^option[1-4]$/.test(raw)) {
         const num = Number(raw.replace('option', ''));
         correctIndex = num - 1;
-      }
-
-      // ---------------------------------------------------------------
-      // D) If user enters actual text of the correct option
-      // ---------------------------------------------------------------
-      else {
+      } else {
         const matchIndex = options.findIndex(
-          opt => String(opt).trim().toLowerCase() === raw
+          (opt) => normalizeValue(opt).toLowerCase() === raw
         );
-
         if (matchIndex !== -1) {
           correctIndex = matchIndex;
         }
       }
 
-
-
-      // Safety: Ensure the index is valid
       if (correctIndex < 0 || correctIndex >= options.length) {
-        correctIndex = 0;  // fallback to option1
+        correctIndex = 0;
       }
 
+      const key = makeQuestionKey(subject, questionText, options, correctIndex);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
 
       docs.push({
-        subject: r.subject,
-        questionText: r.questionText,
+        subject,
+        questionText,
         options,
         correctOption: correctIndex,
-        explanation: r.explanation || '',
-        createdBy: req.user._id
+        explanation,
+        createdBy: req.user._id,
       });
     }
 
-    const created = await Question.insertMany(docs);
+    if (docs.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No valid questions found in the uploaded file.',
+        count: 0,
+        skipped: rows.length,
+      });
+    }
+
+    const existingQuestions = await Question.find({
+      subject: { $in: Array.from(new Set(docs.map((d) => d.subject))) },
+      questionText: { $in: Array.from(new Set(docs.map((d) => d.questionText))) },
+    }).lean();
+
+    const existingKeys = new Set(
+      existingQuestions.map((q) =>
+        makeQuestionKey(
+          q.subject,
+          q.questionText,
+          Array.isArray(q.options) ? q.options : [],
+          q.correctOption
+        )
+      )
+    );
+
+    const uniqueDocs = docs.filter(
+      (doc) => !existingKeys.has(makeQuestionKey(doc.subject, doc.questionText, doc.options, doc.correctOption))
+    );
+    const skipped = docs.length - uniqueDocs.length;
+
+    if (uniqueDocs.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No new questions to upload. Duplicates were skipped.',
+        count: 0,
+        skipped,
+      });
+    }
+
+    const created = await Question.insertMany(uniqueDocs);
 
     res.json({
       status: 'success',
       message: 'Questions uploaded successfully',
-      count: created.length
+      count: created.length,
+      skipped,
     });
 
   } catch (error) {
