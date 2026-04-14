@@ -1,4 +1,5 @@
 
+const Result = require('../models/resultModel');
 const Exam = require('../models/examModel');
 const Question = require('../models/questionModel');
 
