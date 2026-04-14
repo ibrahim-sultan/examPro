@@ -163,6 +163,7 @@ const getAvailableExams = async (req, res) => {
     }).select('exam');
 
     const completedExamIds = completedResults.map((result) => result.exam.toString());
+    const studentGroups = Array.isArray(student.groups) ? student.groups : [];
 
     const exams = await Exam.find({
       status: 'Published',
@@ -172,14 +173,16 @@ const getAvailableExams = async (req, res) => {
       // Exam is available if it has no assigned groups (public)
       // OR if the student is in one of the assigned groups.
       $or: [
-        { assignedGroups: { $exists: true, $size: 0 } },
-        { assignedGroups: { $in: student.groups } },
+        { assignedGroups: { $exists: false } },
+        { assignedGroups: { $size: 0 } },
+        studentGroups.length > 0 ? { assignedGroups: { $in: studentGroups } } : { _id: null }, // _id: null ensures this clause never matches if no groups
       ],
     }).select('-questions -markingScheme -createdBy'); // Exclude sensitive data
 
     res.json(exams);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    console.error('getAvailableExams error:', error);
+    res.status(500).json({ message: 'Server Error', details: error.message });
   }
 };
 
