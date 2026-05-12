@@ -13,7 +13,8 @@ const AdminSidebar = ({ onNavigate }) => {
 
   const onLogout = () => {
     dispatch(logout());
-    navigate('/login');
+    navigate('/login', { replace: true });
+    window.location.reload();
   };
 
   return (

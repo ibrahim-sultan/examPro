@@ -1,6 +1,7 @@
 
 const Group = require('../models/groupModel');
 const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 const Exam = require('../models/examModel');
 
 // @desc    Create a new group
@@ -37,7 +38,7 @@ const getGroups = async (req, res) => {
   try {
     const groups = await Group.find({})
       .populate('createdBy', 'name')
-      .populate('members', 'name email');
+      .populate('members', 'name email admissionNumber classLevel department');
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
@@ -51,7 +52,7 @@ const getGroupById = async (req, res) => {
   try {
     const group = await Group.findById(req.params.id).populate(
       'members',
-      'name email'
+      'name email admissionNumber department classLevel'
     );
     if (group) {
       res.json(group);
@@ -122,39 +123,31 @@ const addMemberToGroup = async (req, res) => {
   try {
     const { userId } = req.body;
     const group = await Group.findById(req.params.id);
-    const user = await User.findById(userId);
+    const student = await Student.findById(userId);
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    if (user.role !== 'Student') {
-      return res
-        .status(400)
-        .json({ message: 'Only students can be added to groups.' });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Add user to group's members if not already there
     if (group.members.includes(userId)) {
       return res
         .status(400)
-        .json({ message: 'User is already in this group' });
+        .json({ message: 'Student is already in this group' });
     }
     group.members.push(userId);
     await group.save();
 
-    // Add group to user's groups if not already there
-    if (!user.groups.includes(group._id)) {
-      user.groups.push(group._id);
-      await user.save();
+    if (!student.groups.includes(group._id)) {
+      student.groups.push(group._id);
+      await student.save();
     }
 
-    // Populate member details for the response
     const updatedGroup = await Group.findById(req.params.id).populate(
       'members',
-      'name email'
+      'name email admissionNumber classLevel department'
     );
 
     res.json(updatedGroup);
@@ -170,20 +163,17 @@ const removeMemberFromGroup = async (req, res) => {
   try {
     const { groupId, userId } = req.params;
     const group = await Group.findById(groupId);
-    const user = await User.findById(userId);
+    const student = await Student.findById(userId);
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Remove user from group's members
     await Group.updateOne({ _id: groupId }, { $pull: { members: userId } });
-
-    // Remove group from user's groups
-    await User.updateOne({ _id: userId }, { $pull: { groups: groupId } });
+    await Student.updateOne({ _id: userId }, { $pull: { groups: groupId } });
 
     res.json({ message: 'Member removed successfully' });
   } catch (error) {

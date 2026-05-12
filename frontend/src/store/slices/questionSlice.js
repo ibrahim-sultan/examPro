@@ -59,6 +59,24 @@ export const deleteQuestion = createAsyncThunk(
   }
 );
 
+export const deleteQuestionsBulk = createAsyncThunk(
+  'question/deleteBulk',
+  async (ids, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().user.userInfo.token;
+      return await questionService.deleteQuestionsBulk(ids, token);
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 // Async thunk for getting question details
 export const getQuestionDetails = createAsyncThunk(
   'question/getDetails',
@@ -156,6 +174,21 @@ export const questionSlice = createSlice({
         );
       })
       .addCase(deleteQuestion.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteQuestionsBulk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(deleteQuestionsBulk.fulfilled, (state, action) => {
+        state.loading = false;
+        const deletedCount = action.payload?.deletedCount ?? 0;
+        if (deletedCount > 0) {
+          const ids = new Set((action.meta.arg || []).map(String));
+          state.questions = state.questions.filter((q) => !ids.has(String(q._id)));
+        }
+      })
+      .addCase(deleteQuestionsBulk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

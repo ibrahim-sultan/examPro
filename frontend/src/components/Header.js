@@ -3,14 +3,18 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { logout } from '../store/slices/userSlice';
 
 const Header = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.user);
 
   const logoutHandler = () => {
     dispatch(logout());
+    navigate('/login', { replace: true });
+    window.location.reload();
   };
 
   return (

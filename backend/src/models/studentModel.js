@@ -4,9 +4,32 @@ const bcrypt = require('bcryptjs');
 const studentSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: false, unique: true },
+    admissionNumber: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    passportPhoto: {
+      type: String,
+      trim: true,
+    },
     password: { type: String, required: true },
     role: { type: String, enum: ['Student'], default: 'Student' },
+    classLevel: {
+      type: String,
+      enum: ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'],
+      required: true,
+      uppercase: true,
+      trim: true,
+    },
+    department: {
+      type: String,
+      enum: ['General', 'Science', 'Art', 'Commercial'],
+      required: true,
+      trim: true,
+    },
     groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
     subjects: [{ type: String, trim: true }],
     isActive: { type: Boolean, default: true },

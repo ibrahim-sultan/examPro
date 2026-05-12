@@ -34,6 +34,18 @@ const GroupListScreen = () => {
     navigate('/admin/group/create');
   };
 
+  const classOrder = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'];
+  const sortedGroups = groupList
+    ? [...groupList].sort((a, b) => {
+        const indexA = classOrder.indexOf(a.name);
+        const indexB = classOrder.indexOf(b.name);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.name.localeCompare(b.name);
+      })
+    : [];
+
   return (
     <>
       <Row className="align-items-center">
@@ -54,19 +66,24 @@ const GroupListScreen = () => {
         <Table striped bordered hover responsive className="table-sm">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>NAME</th>
+              <th>CLASS</th>
+              <th>STUDENTS</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {groupList && groupList.map((group) => (
+            {sortedGroups.map((group) => (
               <tr key={group._id}>
-                <td>{group._id}</td>
                 <td>{group.name}</td>
+                <td>{Array.isArray(group.members) ? group.members.length : 0}</td>
                 <td>
+                  <LinkContainer to={`/admin/group/${group._id}/view`}>
+                    <Button variant="primary" className="btn-sm me-2">
+                      View
+                    </Button>
+                  </LinkContainer>
                   <LinkContainer to={`/admin/group/${group._id}/edit`}>
-                    <Button variant="light" className="btn-sm">
+                    <Button variant="light" className="btn-sm me-2">
                       <i className="fas fa-edit"></i>
                     </Button>
                   </LinkContainer>

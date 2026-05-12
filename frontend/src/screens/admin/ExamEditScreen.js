@@ -1,10 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Form, Button } from 'react-bootstrap';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import API_BASE_URL from '../../config/api';
+
+const CLASS_LEVELS = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'];
+const DEPARTMENT_OPTIONS = {
+  JSS: ['General'],
+  SS: ['Science', 'Art', 'Commercial'],
+};
+
+const getDepartmentsForLevel = (level) => {
+  if (!level) return [];
+  if (level.startsWith('JSS')) return DEPARTMENT_OPTIONS.JSS;
+  if (level.startsWith('SS')) return DEPARTMENT_OPTIONS.SS;
+  return [];
+};
 
 const ExamEditScreen = () => {
   const { id } = useParams();
@@ -18,6 +31,12 @@ const ExamEditScreen = () => {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState(initialSubject);
   const [description, setDescription] = useState('');
+  const [classLevel, setClassLevel] = useState('');
+  const [department, setDepartment] = useState('');
+  const departmentOptions = useMemo(
+    () => getDepartmentsForLevel(classLevel),
+    [classLevel]
+  );
   const [duration, setDuration] = useState(60);
   const [startTime, setStartTime] = useState(''); // datetime-local string
   const [endTime, setEndTime] = useState(''); // datetime-local string
@@ -29,8 +48,28 @@ const ExamEditScreen = () => {
     incorrect: 0,
   });
   const [status, setStatus] = useState('Published'); // Draft | Published | Archived
+  const [passportRequired, setPassportRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
+
+  const [newSubject, setNewSubject] = useState('');
+  const [showNewSubject, setShowNewSubject] = useState(false);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const { data } = await axios.get(`${API_BASE_URL}/api/subjects`);
+        setSubjects(data || []);
+      } catch (e) {
+        console.error('Failed to fetch subjects:', e);
+        setSubjects([]);
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   useEffect(() => {
     const fetchExam = async () => {
@@ -47,9 +86,12 @@ const ExamEditScreen = () => {
         setTitle(data.title || '');
         setSubject(data.subject || '');
         setDescription(data.description || '');
+        setClassLevel(data.classLevel || '');
+        setDepartment(data.department || '');
         setDuration(data.duration || 60);
         setMarkingScheme(data.markingScheme || { correct: 1, incorrect: 0 });
         setStatus(data.status || 'Draft');
+        setPassportRequired(!!data.passportRequired);
         // Map ISO strings to datetime-local format (YYYY-MM-DDTHH:MM)
         if (data.startTime) {
           const d = new Date(data.startTime);
@@ -62,6 +104,8 @@ const ExamEditScreen = () => {
         if (Array.isArray(data.questions)) {
           setQuestionCount(data.questions.length);
         }
+        // Map fetched exam subject string to a subjectId (best-effort)
+        // We will finalize it after subjects load; leaving for now to avoid race.
       } catch (e) {
         setError(e.response?.data?.message || e.message || 'Failed to load exam');
       } finally {
@@ -102,11 +146,14 @@ const ExamEditScreen = () => {
         title,
         subject,
         description,
+        classLevel: classLevel || undefined,
+        department: department || undefined,
         duration: Number(duration),
         startTime: startTime ? new Date(startTime).toISOString() : undefined,
         endTime: endTime ? new Date(endTime).toISOString() : undefined,
         markingScheme,
         status,
+        passportRequired,
       };
 
       if (id) {
@@ -127,6 +174,64 @@ const ExamEditScreen = () => {
       navigate('/admin/examlist');
     } catch (e) {
       setError(e.response?.data?.message || e.message || 'Failed to save exam');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshSubjects = async () => {
+    const { data } = await axios.get(`${API_BASE_URL}/api/subjects`);
+    const nextSubjects = data || [];
+    setSubjects(nextSubjects);
+
+    // If the current selected subject id still exists, keep selection.
+    if (selectedSubjectId) {
+      const exists = nextSubjects.find((s) => s._id === selectedSubjectId);
+      if (!exists) {
+        setSelectedSubjectId(null);
+        setSubject('');
+      }
+    } else if (subject) {
+      // Try to match by display string.
+      const matched = nextSubjects.find((s) => (s.displayName || s.name) === subject);
+      if (matched) setSelectedSubjectId(matched._id);
+    }
+  };
+
+  useEffect(() => {
+    // After subjects are loaded, try to resolve selectedSubjectId for edit form.
+    if (!subjects?.length) return;
+    if (selectedSubjectId) return;
+
+    if (subject) {
+      const matched = subjects.find((s) => (s.displayName || s.name) === subject);
+      if (matched) setSelectedSubjectId(matched._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects]);
+
+  const handleDeleteSelectedSubject = async () => {
+    if (!selectedSubjectId) return;
+    try {
+      setLoading(true);
+      setError(null);
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      await axios.delete(`${API_BASE_URL}/api/subjects/${selectedSubjectId}`, config);
+
+      await refreshSubjects();
+
+      setSelectedSubjectId(null);
+      setSubject('');
+      setShowNewSubject(false);
+      setNewSubject('');
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to delete subject');
     } finally {
       setLoading(false);
     }
@@ -153,13 +258,141 @@ const ExamEditScreen = () => {
 
         <Form.Group controlId="subject" className="my-3">
           <Form.Label>Subject</Form.Label>
-          <Form.Control
-            type="text"
-            placeholder="Enter subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            required
-          />
+          <div className="d-flex gap-2 align-items-start">
+            <div style={{ flex: 1 }}>
+              <Form.Select
+                value={selectedSubjectId || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__add_new__') {
+                    setShowNewSubject(true);
+                    setSelectedSubjectId(null);
+                    setSubject('');
+                  } else {
+                    const chosen = subjects.find((s) => s._id === val);
+                    setSelectedSubjectId(val || null);
+                    setSubject(chosen ? (chosen.displayName || chosen.name) : '');
+                    setShowNewSubject(false);
+                    setNewSubject('');
+                  }
+                }}
+                required
+              >
+                <option value="">Select a subject or add new</option>
+                {subjects.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.displayName || s.name}
+                  </option>
+                ))}
+                <option value="__add_new__">+ Add New Subject</option>
+              </Form.Select>
+            </div>
+
+            <div className="d-flex flex-column" style={{ gap: 8 }}>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                disabled={!selectedSubjectId}
+                onClick={handleDeleteSelectedSubject}
+                title="Delete selected subject"
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+
+          {showNewSubject && (
+            <div className="mt-2 d-flex gap-2">
+              <Form.Control
+                type="text"
+                placeholder="Enter new subject name"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+              />
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (newSubject.trim()) {
+                    try {
+                      const config = {
+                        headers: {
+                          Authorization: `Bearer ${userInfo.token}`,
+                        },
+                      };
+                      const { data } = await axios.post(
+                        `${API_BASE_URL}/api/subjects`,
+                        { name: newSubject },
+                        config
+                      );
+                      // Add to subjects list and select it
+                      setSubjects((prev) => [...prev, data]);
+                      setSelectedSubjectId(data?._id || null);
+                      setSubject(data ? data.displayName || data.name : newSubject);
+                      setNewSubject('');
+                      setShowNewSubject(false);
+                    } catch (e) {
+                      setError(e.response?.data?.message || 'Failed to create subject');
+                    }
+                  }
+                }}
+              >
+                Add
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setShowNewSubject(false);
+                  setNewSubject('');
+                  setSelectedSubjectId(null);
+                  setSubject('');
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </Form.Group>
+
+        <Form.Group controlId="classLevel" className="my-3">
+          <Form.Label>Class Level</Form.Label>
+          <Form.Select
+            value={classLevel}
+            onChange={(e) => {
+              setClassLevel(e.target.value);
+              setDepartment('');
+            }}
+          >
+            <option value="">Select a class level</option>
+            {CLASS_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </Form.Select>
+        </Form.Group>
+
+        <Form.Group controlId="department" className="my-3">
+          <Form.Label>Department</Form.Label>
+          <Form.Select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            disabled={!classLevel}
+          >
+            <option value="">Select a department</option>
+            {departmentOptions.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
+          </Form.Select>
+          <Form.Text className="text-muted">
+            {classLevel
+              ? classLevel.startsWith('JSS')
+                ? 'JSS exams use General only.'
+                : 'SS exams use Science, Art, or Commercial.'
+              : 'Select a class level first to choose a department.'}
+          </Form.Text>
         </Form.Group>
 
         <Form.Group controlId="description" className="my-3">
@@ -180,6 +413,14 @@ const ExamEditScreen = () => {
             <option value="Published">Published</option>
             <option value="Archived">Archived</option>
           </Form.Select>
+        </Form.Group>
+        <Form.Group controlId="passportRequired" className="my-3">
+          <Form.Check
+            type="checkbox"
+            label="Passport photo required before exam start"
+            checked={passportRequired}
+            onChange={(e) => setPassportRequired(e.target.checked)}
+          />
         </Form.Group>
 
         <Form.Group controlId="duration" className="my-3">

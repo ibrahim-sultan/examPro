@@ -11,10 +11,14 @@ const {
   updateUserProfile,
   getMySubjects,
   updateMySubjects,
+  uploadPassportPhoto,
+  bulkDeleteUsers,
+  passportUpload,
 } = require('../controllers/userController');
 const { protect, admin } = require('../middlewares/authMiddleware');
 
 router.route('/').post(registerUser).get(protect, admin, getUsers);
+router.post('/bulk-delete', protect, admin, bulkDeleteUsers);
 router
   .route('/profile')
   .get(protect, getUserProfile)
@@ -30,5 +34,6 @@ router
   .delete(protect, admin, deleteUser)
   .get(protect, admin, getUserById)
   .put(protect, admin, updateUser);
+router.post('/:id/passport', protect, admin, passportUpload.single('image'), uploadPassportPhoto);
 
 module.exports = router;

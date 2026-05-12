@@ -7,6 +7,9 @@ const {
   getQuestionById,
   updateQuestion,
   deleteQuestion,
+  deleteQuestionsBulk,
+  uploadQuestionImage,
+  questionImageUpload,
   getSubjects,
 } = require('../controllers/questionController');
 const { protect, admin } = require('../middlewares/authMiddleware');
@@ -19,6 +22,8 @@ router
   .route('/')
   .post(protect, admin, createQuestion)
   .get(protect, admin, getQuestions);
+router.route('/bulk-delete').post(protect, admin, deleteQuestionsBulk);
+router.post('/upload-image', protect, admin, questionImageUpload.single('image'), uploadQuestionImage);
 
 router
   .route('/:id')

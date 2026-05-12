@@ -8,16 +8,36 @@ const Student = require('../models/studentModel');
 // @access  Public
 const authUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, admissionNumber, surname } = req.body;
 
-    let account = await User.findOne({ email });
+    let account = null;
     let role = null;
-    if (account && (await account.matchPassword(password))) {
-      role = account.role;
-    } else {
-      account = await Student.findOne({ email });
+
+    if (admissionNumber && surname) {
+      // Student login with admission number and surname
+      account = await Student.findOne({ admissionNumber });
+      if (account) {
+        // Extract surname from name (last word)
+        const nameParts = (account.name || '').trim().split(/\s+/);
+        const studentSurname = nameParts[nameParts.length - 1] || '';
+        
+        // Compare provided surname with extracted surname (case-insensitive)
+        if (surname.toLowerCase() === studentSurname.toLowerCase()) {
+          role = 'Student';
+        } else {
+          account = null;
+        }
+      }
+    } else if (email && password) {
+      // Staff/Admin login with email and password
+      account = await User.findOne({ email });
       if (account && (await account.matchPassword(password))) {
-        role = 'Student';
+        role = account.role;
+      } else {
+        account = await Student.findOne({ email });
+        if (account && (await account.matchPassword(password))) {
+          role = 'Student';
+        }
       }
     }
 
@@ -28,10 +48,14 @@ const authUser = async (req, res) => {
         email: account.email,
         role,
         subjects: account.subjects || [],
+        classLevel: account.classLevel || undefined,
+        department: account.department || undefined,
+        admissionNumber: account.admissionNumber || undefined,
+        passportPhoto: account.passportPhoto || '',
         token: generateToken(account._id),
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
     console.error('Login error:', error);

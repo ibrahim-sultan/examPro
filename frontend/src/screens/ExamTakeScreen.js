@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Card, Col, ListGroup, Row, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 import Loader from '../components/Loader';
 import Message from '../components/Message';
+import MathText from '../components/MathText';
 import Timer from '../components/Timer';
 import { motion } from 'framer-motion';
 import { startExam, submitExam } from '../store/slices/resultSlice';
+import { refreshSessionUser } from '../store/slices/userSlice';
 
 const normalizeEntityId = (value) => {
   if (!value) return null;
@@ -21,16 +23,38 @@ const normalizeEntityId = (value) => {
   return String(value);
 };
 
+const parseQuestionLabel = (label) => {
+  const raw = String(label || '').trim().toLowerCase();
+  const parts = raw.match(/^(\d+)\s*([a-z]+)?$/i);
+  if (!parts) return [Number.MAX_SAFE_INTEGER, raw];
+  return [Number(parts[1]), parts[2] || ''];
+};
+
+const compareQuestionLabels = (labelA, labelB) => {
+  const [numA, suffixA] = parseQuestionLabel(labelA);
+  const [numB, suffixB] = parseQuestionLabel(labelB);
+  if (numA !== numB) return numA - numB;
+  if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
+  return 0;
+};
+
 const ExamTakeScreen = () => {
   const { id: examId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch();
 
   const { activeResult, loading, error } = useSelector((state) => state.result);
   const { userInfo } = useSelector((state) => state.user);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({}); // { [questionId]: selectedOptionIndex }
+
+  useEffect(() => {
+    if (userInfo?.token) {
+      dispatch(refreshSessionUser());
+      const interval = setInterval(() => dispatch(refreshSessionUser()), 20000);
+      return () => clearInterval(interval);
+    }
+  }, [dispatch, userInfo?.token]);
 
   useEffect(() => {
     // If the user is not logged in for some reason, send them to login
@@ -161,7 +185,12 @@ const ExamTakeScreen = () => {
     );
   }
 
-  const questions = activeResult.exam.questions;
+  const rawQuestions = activeResult.exam.questions;
+  const objectiveQuestions = rawQuestions.filter((q) => q.type !== 'theory');
+  const theoryQuestions = rawQuestions
+    .filter((q) => q.type === 'theory')
+    .sort((a, b) => compareQuestionLabels(a.questionLabel, b.questionLabel));
+  const questions = [...objectiveQuestions, ...theoryQuestions];
   const currentQuestion = questions[currentQuestionIndex];
   const qid = currentQuestion._id || currentQuestion.id;
 
@@ -186,21 +215,64 @@ const ExamTakeScreen = () => {
           </Card.Header>
           <Card.Body>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <h5 className="mb-3">{currentQuestion.questionText}</h5>
-              <ListGroup>
-                {currentQuestion.options.map((option, index) => (
-                  <ListGroup.Item key={index}>
-                    <Form.Check
-                      type="radio"
-                      id={`q-${qid}-opt-${index}`}
-                      name={`question-${qid}`}
-                      label={option}
-                      checked={answers[qid] === index}
-                      onChange={() => handleAnswerChange(qid, index)}
-                    />
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
+              {(() => {
+                const rawQuestions = activeResult.exam.questions || [];
+                const objectiveQuestions = rawQuestions.filter((q) => q.type !== 'theory');
+                const theoryQuestions = rawQuestions
+                  .filter((q) => q.type === 'theory')
+                  .sort((a, b) => compareQuestionLabels(a.questionLabel, b.questionLabel));
+                const ordered = [...objectiveQuestions, ...theoryQuestions];
+
+                const firstTheoryIndex = theoryQuestions.length
+                  ? objectiveQuestions.length
+                  : -1;
+
+                const shouldShowExamInstruction =
+                  firstTheoryIndex !== -1 &&
+                  currentQuestionIndex === firstTheoryIndex &&
+                  activeResult.exam?.description &&
+                  String(activeResult.exam.description).trim().length > 0;
+
+                return shouldShowExamInstruction ? (
+                  <div className="alert alert-info">
+                    <strong>Instruction:</strong>{' '}
+                    <MathText text={activeResult.exam.description} />
+                  </div>
+                ) : null;
+              })()}
+              <h5 className="mb-3">
+                {currentQuestion.questionLabel ? `${currentQuestion.questionLabel}. ` : ''}
+                <MathText text={currentQuestion.questionText || currentQuestion.question || currentQuestion.text} />
+              </h5>
+              {currentQuestion.imageUrl && (
+                <div className="mb-3">
+                  <img
+                    src={`${API_BASE_URL}${currentQuestion.imageUrl}`}
+                    alt="Question reference"
+                    style={{ maxWidth: '100%', maxHeight: '280px', objectFit: 'contain' }}
+                  />
+                </div>
+              )}
+              {currentQuestion.type === 'theory' ? (
+                <div className="alert alert-warning">
+                  Theory section: Write your answer on the provided paper sheet.
+                </div>
+              ) : (
+                <ListGroup>
+                  {Array.isArray(currentQuestion.options) && currentQuestion.options.map((option, index) => (
+                    <ListGroup.Item key={index}>
+                      <Form.Check
+                        type="radio"
+                        id={`q-${qid}-opt-${index}`}
+                        name={`question-${qid}`}
+                        label={<MathText text={option} />}
+                        checked={answers[qid] === index}
+                        onChange={() => handleAnswerChange(qid, index)}
+                      />
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
             </motion.div>
           </Card.Body>
           <Card.Footer>
@@ -237,27 +309,60 @@ const ExamTakeScreen = () => {
         </Card>
       </Col>
       <Col md={3} lg={3} className="mt-3 mt-md-0">
+        {userInfo?.passportPhoto && (
+          <Card className="shadow-sm mb-3 text-center">
+            <Card.Body className="p-3">
+              <div className="mb-2 fw-bold">Student Passport</div>
+              <img
+                src={`${API_BASE_URL}${userInfo.passportPhoto}`}
+                alt="Student passport"
+                style={{
+                  width: 140,
+                  height: 140,
+                  borderRadius: 12,
+                  objectFit: 'cover',
+                  border: '2px solid #dee2e6',
+                }}
+              />
+              <div className="mt-2">
+                <div className="fw-bold">{userInfo?.name}</div>
+                <div className="text-muted small">Admission No: {userInfo?.admissionNumber || '-'}</div>
+                <div className="text-muted small">Class: {userInfo?.classLevel || '-'}</div>
+                <div className="text-muted small">Department: {userInfo?.department || '-'}</div>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
         <Card className="shadow-sm h-100">
           <Card.Header>
             <strong>Question Palette</strong>
           </Card.Header>
           <Card.Body>
+            <div className="small text-muted mb-2">Objective</div>
             <div className="d-flex flex-wrap gap-2">
-              {questions.map((q, index) => {
+              {objectiveQuestions.map((q) => {
+                const index = questions.findIndex((item) => (item._id || item.id) === (q._id || q.id));
                 const id = q._id || q.id;
                 const attempted = answers[id] !== undefined && answers[id] !== null;
                 const isCurrent = index === currentQuestionIndex;
 
                 let variant = 'outline-secondary';
-                if (attempted) variant = 'success';
-                if (!attempted) variant = 'outline-danger';
-                if (isCurrent) variant = 'primary';
+                let style = {};
+                if (isCurrent) {
+                  variant = 'primary';
+                } else if (attempted) {
+                  variant = 'success';
+                } else {
+                  variant = 'outline-danger';
+                  style = { backgroundColor: '#ffffff', color: '#dc3545' };
+                }
 
                 return (
                   <Button
                     key={id || index}
                     size="sm"
                     variant={variant}
+                    style={style}
                     onClick={() => goToQuestion(index)}
                   >
                     {index + 1}
@@ -265,6 +370,29 @@ const ExamTakeScreen = () => {
                 );
               })}
             </div>
+            {theoryQuestions.length > 0 && (
+              <>
+                <hr />
+                <div className="small text-muted mb-2">Theory</div>
+                <div className="d-flex flex-wrap gap-2">
+                  {theoryQuestions.map((q) => {
+                    const index = questions.findIndex((item) => (item._id || item.id) === (q._id || q.id));
+                    const id = q._id || q.id;
+                    const isCurrent = index === currentQuestionIndex;
+                    return (
+                      <Button
+                        key={id || index}
+                        size="sm"
+                        variant={isCurrent ? 'primary' : 'outline-secondary'}
+                        onClick={() => goToQuestion(index)}
+                      >
+                        {q.questionLabel || index + 1}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <div className="mt-3 small">
               <div className="d-flex align-items-center mb-1">
                 <Badge bg="primary" className="me-2">&nbsp;</Badge> Current
@@ -273,7 +401,7 @@ const ExamTakeScreen = () => {
                 <Badge bg="success" className="me-2">&nbsp;</Badge> Attempted
               </div>
               <div className="d-flex align-items-center">
-                <Badge bg="danger" className="me-2">&nbsp;</Badge> Not Attempted
+                <Badge bg="white" className="border border-danger text-danger me-2" style={{ width: '0.9rem', height: '0.9rem' }}>&nbsp;</Badge> Not Attempted
               </div>
             </div>
           </Card.Body>

@@ -10,6 +10,10 @@ const answerSchema = new mongoose.Schema(
     selectedOption: {
       type: Number,
     },
+    textAnswer: {
+      type: String,
+      trim: true,
+    },
     optionOrder: {
       type: [Number],
       default: [],

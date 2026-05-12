@@ -92,6 +92,7 @@ const ExamListScreen = () => {
               <th>TITLE</th>
               <th>SUBJECT</th>
               <th>DURATION (MINS)</th>
+              <th>PASSPORT REQUIRED</th>
               <th>RESULTS</th>
               <th></th>
             </tr>
@@ -103,6 +104,7 @@ const ExamListScreen = () => {
                 <td>{exam.title}</td>
                 <td>{exam.subject}</td>
                 <td>{exam.duration}</td>
+                <td>{exam.passportRequired ? 'Yes' : 'No'}</td>
                 <td>
                   <Button
                     variant="info"

@@ -15,8 +15,18 @@ const examSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    classLevel: {
+      type: String,
+      enum: ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'],
+      trim: true,
+      uppercase: true,
+    },
+    department: {
+      type: String,
+      enum: ['General', 'Science', 'Art', 'Commercial'],
+      trim: true,
+    },
     duration: {
-      // Duration in minutes
       type: Number,
       required: true,
     },
@@ -43,10 +53,14 @@ const examSchema = mongoose.Schema(
       },
       incorrect: {
         type: Number,
-        default: 0, // Can be negative, e.g., -0.25
+        default: 0,
       },
     },
     randomizeQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    passportRequired: {
       type: Boolean,
       default: false,
     },

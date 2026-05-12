@@ -12,6 +12,24 @@ const shuffle = (arr) => {
   return a;
 };
 
+const parseQuestionLabel = (label) => {
+  const raw = String(label || '').trim().toLowerCase();
+  const parts = raw.match(/^(\d+)\s*([a-z]+)?$/i);
+  if (!parts) return [Number.MAX_SAFE_INTEGER, raw];
+  return [Number(parts[1]), parts[2] || ''];
+};
+
+const compareQuestionLabels = (labelA, labelB) => {
+  const [numA, suffixA] = parseQuestionLabel(labelA);
+  const [numB, suffixB] = parseQuestionLabel(labelB);
+  if (numA !== numB) return numA - numB;
+  if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
+  return 0;
+};
+
+const sortTheoryQuestions = (questions) =>
+  [...questions].sort((a, b) => compareQuestionLabels(a.questionLabel, b.questionLabel));
+
 // @desc    Start an exam for a student
 // @route   POST /api/results/start/:examId
 // @access  Private/Student
@@ -25,13 +43,27 @@ const startExam = async (req, res) => {
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Check if user has an existing session for this exam
-    const existingResult = await Result.findOne({ exam: examId, user: userId }).sort({ createdAt: -1 });
-    if (existingResult) {
-      if (existingResult.status === 'Completed') {
-        return res.status(400).json({ message: 'You have already completed this exam. Only one attempt is allowed.' });
+    if (req.user.role === 'Student' && exam.classLevel && exam.department) {
+      if (
+        String(req.user.classLevel).toUpperCase() !== String(exam.classLevel).toUpperCase() ||
+        String(req.user.department) !== String(exam.department)
+      ) {
+        return res.status(403).json({ message: 'Not authorized to start this exam' });
       }
+    }
+    if (req.user.role === 'Student' && exam.passportRequired && !req.user.passportPhoto) {
+      return res.status(403).json({ message: 'Passport photo is required before starting this exam' });
+    }
 
+    // Check if user has already completed this exam (only one attempt allowed)
+    const completedResult = await Result.findOne({ exam: examId, user: userId, status: 'Completed' });
+    if (completedResult) {
+      return res.status(400).json({ message: 'You have already completed this exam. Only one attempt is allowed.' });
+    }
+
+    // Check if user has an existing session for this exam
+    const existingResult = await Result.findOne({ exam: examId, user: userId, status: 'In Progress' }).sort({ createdAt: -1 });
+    if (existingResult) {
       if (existingResult.status === 'In Progress') {
         const elapsedMinutes = (Date.now() - new Date(existingResult.startTime).getTime()) / (1000 * 60);
         if (elapsedMinutes <= exam.duration) {
@@ -67,16 +99,25 @@ const startExam = async (req, res) => {
           message: 'Your previous exam session has expired. Only one attempt is allowed.',
         });
       }
-      // If the last session is already completed or otherwise final, do not allow a new attempt.
     }
 
     // New session: build answers skeleton with per-question option order
     const examObj = exam.toObject();
     let questions = examObj.questions;
-    if (exam.randomizeQuestions) questions = shuffle(questions);
+
+    if (exam.randomizeQuestions) {
+      const objectiveQuestions = questions.filter((q) => q.type !== 'theory');
+      const theoryQuestions = questions.filter((q) => q.type === 'theory');
+      questions = [...shuffle(objectiveQuestions), ...sortTheoryQuestions(theoryQuestions)];
+    } else {
+      const objectiveQuestions = questions.filter((q) => q.type !== 'theory');
+      const theoryQuestions = questions.filter((q) => q.type === 'theory');
+      questions = [...objectiveQuestions, ...sortTheoryQuestions(theoryQuestions)];
+    }
 
     const answersSkeleton = questions.map((q) => {
-      const order = shuffle([...Array(q.options.length).keys()]);
+      const safeOptions = Array.isArray(q.options) ? q.options : [];
+      const order = q.type === 'objective' && safeOptions.length ? shuffle([...Array(safeOptions.length).keys()]) : [];
       return { question: q._id, optionOrder: order };
     });
 
@@ -90,9 +131,24 @@ const startExam = async (req, res) => {
 
     const sanitizedQuestions = questions.map((q) => {
       const ans = answersSkeleton.find((a) => a.question.toString() === q._id.toString());
-      const displayOptions = ans.optionOrder.map((idx) => q.options[idx]);
-      const { correctOption, options, ...rest } = q;
-      return { ...rest, options: displayOptions };
+      const safeOptions = Array.isArray(q.options) ? q.options : [];
+      const displayOptions = Array.isArray(ans.optionOrder)
+        ? ans.optionOrder.map((idx) => safeOptions[idx]).filter(Boolean)
+        : [];
+      const { correctAnswer, options, ...rest } = q;
+
+      const theoryInstruction =
+        q.type === 'theory'
+          ? (q.instruction && q.instruction.trim()
+              ? q.instruction
+              : 'Answer this question in the answer booklet provided')
+          : undefined;
+
+      return {
+        ...rest,
+        options: q.type === 'objective' ? displayOptions : [],
+        instruction: theoryInstruction,
+      };
     });
 
     res.status(201).json({ ...createdResult.toObject(), exam: { ...examObj, questions: sanitizedQuestions } });
@@ -138,9 +194,8 @@ const submitExam = async (req, res) => {
 
     exam.questions.forEach((question) => {
       const qid = question._id.toString();
+      const safeOptions = Array.isArray(question.options) ? question.options : [];
 
-      // Answers come from the frontend as an object: { [questionId]: selectedDisplayIndex }.
-      // In practice, the indices may be numbers or numeric strings, so normalise to Number.
       const rawVal = rawAnswers[qid];
       const selectedDisplayIndex =
         rawVal !== undefined && rawVal !== null && !Number.isNaN(Number(rawVal))
@@ -154,26 +209,34 @@ const submitExam = async (req, res) => {
       const optionOrder =
         (existing && Array.isArray(existing.optionOrder) && existing.optionOrder.length)
           ? existing.optionOrder
-          : [...Array((question.options || []).length).keys()];
+          : question.type === 'objective'
+            ? [...Array(safeOptions.length).keys()]
+            : [];
 
       const selectedOriginalIndex =
         selectedDisplayIndex !== null && optionOrder[selectedDisplayIndex] !== undefined
           ? optionOrder[selectedDisplayIndex]
           : null;
 
-      const isCorrect =
-        selectedOriginalIndex !== null && selectedOriginalIndex === question.correctOption;
+      let isCorrect = false;
+      if (question.type === 'objective') {
+        isCorrect =
+          selectedOriginalIndex !== null &&
+          typeof question.correctAnswer === 'string' &&
+          safeOptions[selectedOriginalIndex] &&
+          safeOptions[selectedOriginalIndex].toLowerCase() === question.correctAnswer.toLowerCase();
 
-      if (isCorrect) {
-        // Currently +1 per correct answer. To apply exam.markingScheme, replace with that logic.
-        score += 1;
+        if (isCorrect) {
+          score += 1;
+        }
       }
 
       answerDetails.push({
         question: question._id,
-        selectedOption: selectedDisplayIndex,
+        selectedOption: question.type === 'objective' ? selectedDisplayIndex : null,
+        textAnswer: question.type === 'theory' ? String(rawVal || '').trim() : '',
         optionOrder,
-        isCorrect,
+        isCorrect: question.type === 'objective' ? isCorrect : null,
       });
     });
 
@@ -274,7 +337,7 @@ const exportResultsCSV = async (req, res) => {
     // Fetch matching accounts from both User and Student collections
     const [users, students] = await Promise.all([
       User.find({ _id: { $in: userIds } }).select('name email'),
-      Student.find({ _id: { $in: userIds } }).select('name email'),
+      Student.find({ _id: { $in: userIds } }).select('name email admissionNumber'),
     ]);
 
     const accountMap = new Map();
@@ -282,21 +345,30 @@ const exportResultsCSV = async (req, res) => {
     students.forEach((s) => accountMap.set(s._id.toString(), s));
 
     const rows = [
-      ['Name', 'Email', 'Score', 'Status', 'Start Time', 'End Time', 'Tab Switches', 'Copy/Paste Attempts'],
+      ['Name', 'Email', 'Admission Number', 'Subject', 'Objective Score', 'Theory Answered', 'Status', 'Start Time', 'End Time', 'Tab Switches', 'Copy/Paste Attempts'],
     ];
 
     for (const r of results) {
+      // Skip non-completed results in export
+      if (r.status !== 'Completed') continue;
+      
       const account = r.user ? accountMap.get(r.user.toString()) : null;
 
       // Prefer stored score, but if it's missing or clearly wrong while answers exist,
       // recompute from answers to ensure exported scores are accurate.
       let effectiveScore = typeof r.score === 'number' && !Number.isNaN(r.score) ? r.score : 0;
+      let theoryAnswered = 0;
       if (Array.isArray(r.answers) && r.answers.length && questionMap.size) {
         let recomputed = 0;
         for (const ans of r.answers) {
           if (!ans || !ans.question) continue;
           const q = questionMap.get(ans.question.toString());
-          if (!q || !Array.isArray(q.options)) continue;
+          if (!q) continue;
+          if (q.type === 'theory') {
+            if (String(ans.textAnswer || '').trim()) theoryAnswered += 1;
+            continue;
+          }
+          if (!Array.isArray(q.options)) continue;
 
           let selectedOriginalIndex = null;
 
@@ -316,10 +388,17 @@ const exportResultsCSV = async (req, res) => {
 
           if (
             selectedOriginalIndex !== null &&
-            typeof q.correctOption === 'number' &&
-            selectedOriginalIndex === q.correctOption
+            q.options &&
+            Array.isArray(q.options) &&
+            q.correctAnswer
           ) {
-            recomputed += 1;
+            const selectedOption = q.options[selectedOriginalIndex];
+            if (
+              selectedOption &&
+              String(selectedOption).toLowerCase() === String(q.correctAnswer).toLowerCase()
+            ) {
+              recomputed += 1;
+            }
           }
         }
         effectiveScore = recomputed;
@@ -328,7 +407,10 @@ const exportResultsCSV = async (req, res) => {
       rows.push([
         account?.name || '',
         account?.email || '',
+        account?.admissionNumber || '',
+        exam?.subject || '',
         effectiveScore,
+        theoryAnswered,
         r.status,
         r.startTime ? new Date(r.startTime).toISOString() : '',
         r.submittedAt ? new Date(r.submittedAt).toISOString() : '',
@@ -376,7 +458,7 @@ const getExamAnalytics = async (req, res) => {
 // My results (student)
 const getMyResults = async (req, res) => {
   try {
-    const results = await Result.find({ user: req.user._id })
+    const results = await Result.find({ user: req.user._id, status: 'Completed' })
       .select('-answers')
       .populate({
         path: 'exam',
@@ -387,7 +469,18 @@ const getMyResults = async (req, res) => {
       .sort({ submittedAt: -1, createdAt: -1 });
     
     const validResults = results.filter(r => r.exam !== null);
-    res.json(validResults || []);
+    // Deduplicate: keep only the most recent result per exam
+    const examMap = new Map();
+    validResults.forEach((result) => {
+      const examId = result.exam?._id?.toString();
+      if (examId) {
+        if (!examMap.has(examId) || new Date(result.createdAt) > new Date(examMap.get(examId).createdAt)) {
+          examMap.set(examId, result);
+        }
+      }
+    });
+    const deduplicatedResults = Array.from(examMap.values());
+    res.json(deduplicatedResults || []);
   } catch (e) {
     console.error('getMyResults error:', e.message);
     res.status(500).json({ message: 'Server Error', details: e.message });

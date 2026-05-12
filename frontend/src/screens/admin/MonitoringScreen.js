@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Button, Form, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
@@ -11,18 +11,25 @@ const MonitoringScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
-      setLoading(true); setError('');
-      const { data } = await axios.get(`${API_BASE_URL}/api/monitor/ongoing${examId ? `?examId=${examId}` : ''}`,
-        { headers: { Authorization: `Bearer ${userInfo?.token}` } });
+      setLoading(true);
+      setError('');
+      const { data } = await axios.get(
+        `${API_BASE_URL}/api/monitor/ongoing${examId ? `?examId=${examId}` : ''}`,
+        { headers: { Authorization: `Bearer ${userInfo?.token}` } }
+      );
       setSessions(data);
     } catch (e) {
       setError('Failed to load sessions');
-    } finally { setLoading(false); }
-  };
+    } finally {
+      setLoading(false);
+    }
+  }, [examId, userInfo?.token]);
 
-  useEffect(() => { fetchSessions(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   const act = async (path) => {
     try {

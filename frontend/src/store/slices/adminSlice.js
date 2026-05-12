@@ -21,6 +21,10 @@ const initialState = {
   loadingDelete: false,
   errorDelete: null,
   successDelete: false,
+  // Add state for bulk delete
+  loadingBulkDelete: false,
+  errorBulkDelete: null,
+  successBulkDelete: false,
 };
 
 // Async thunk to get all users
@@ -162,6 +166,38 @@ export const deleteUser = createAsyncThunk(
   }
 );
 
+// Async thunk to bulk delete users
+export const bulkDeleteUsers = createAsyncThunk(
+  'admin/bulkDeleteUsers',
+  async (userIds, { getState, rejectWithValue }) => {
+    try {
+      const {
+        user: { userInfo },
+      } = getState();
+
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      const { data } = await axios.post(
+        `${API_BASE_URL}/api/users/bulk-delete`,
+        { userIds },
+        config
+      );
+      return data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message
+      );
+    }
+  }
+);
+
 const adminSlice = createSlice({
   name: 'admin',
   initialState,
@@ -244,6 +280,20 @@ const adminSlice = createSlice({
       .addCase(deleteUser.rejected, (state, action) => {
         state.loadingDelete = false;
         state.errorDelete = action.payload;
+      })
+      // Cases for bulkDeleteUsers
+      .addCase(bulkDeleteUsers.pending, (state) => {
+        state.loadingBulkDelete = true;
+        state.successBulkDelete = false;
+        state.errorBulkDelete = null;
+      })
+      .addCase(bulkDeleteUsers.fulfilled, (state) => {
+        state.loadingBulkDelete = false;
+        state.successBulkDelete = true;
+      })
+      .addCase(bulkDeleteUsers.rejected, (state, action) => {
+        state.loadingBulkDelete = false;
+        state.errorBulkDelete = action.payload;
       });
   },
 });

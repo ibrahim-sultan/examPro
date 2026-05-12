@@ -8,7 +8,7 @@ import API_BASE_URL from '../../config/api';
 
 export const login = createAsyncThunk(
   'user/login',
-  async ({ email, password }, { rejectWithValue }) => {
+  async (credentials, { rejectWithValue }) => {
     try {
       const config = {
         headers: {
@@ -17,7 +17,7 @@ export const login = createAsyncThunk(
       };
       const { data } = await axios.post(
         `${API_BASE_URL}/api/auth/login`,
-        { email, password },
+        credentials,
         config
       );
       localStorage.setItem('userInfo', JSON.stringify(data));
@@ -104,6 +104,31 @@ export const updateUserProfile = createAsyncThunk(
       const { data } = await axios.put(`${API_BASE_URL}/api/users/profile`, user, config);
       localStorage.setItem('userInfo', JSON.stringify(data));
       return data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message
+      );
+    }
+  }
+);
+
+export const refreshSessionUser = createAsyncThunk(
+  'user/refreshSessionUser',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const {
+        user: { userInfo },
+      } = getState();
+      if (!userInfo?.token) return null;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      const { data } = await axios.get(`${API_BASE_URL}/api/users/profile`, config);
+      return { ...userInfo, ...data, token: userInfo.token };
     } catch (error) {
       return rejectWithValue(
         error.response && error.response.data.message
@@ -282,6 +307,12 @@ const userSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(refreshSessionUser.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.userInfo = action.payload;
+          localStorage.setItem('userInfo', JSON.stringify(action.payload));
+        }
       })
       // Update User (Admin)
       .addCase(updateUser.pending, (state) => {

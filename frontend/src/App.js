@@ -1,9 +1,9 @@
 import React from 'react';
 import { HashRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Container } from 'react-bootstrap';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -11,6 +11,7 @@ import UserListScreen from './screens/admin/UserListScreen';
 import UserEditScreen from './screens/admin/UserEditScreen';
 import StudentDashboardScreen from './screens/StudentDashboardScreen';
 import GroupListScreen from './screens/admin/GroupListScreen';
+import GroupDetailScreen from './screens/admin/GroupDetailScreen';
 import GroupEditScreen from './screens/admin/GroupEditScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
 import ExamListScreen from './screens/admin/ExamListScreen';
@@ -27,18 +28,35 @@ import AdminRoute from './components/AdminRoute';
 import PageTransition from './components/PageTransition';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
+import { useDispatch } from 'react-redux';
+import { refreshSessionUser } from './store/slices/userSlice';
 
 const AppRoutes = () => {
   const location = useLocation();
+  const { userInfo } = useSelector((state) => state.user);
+  const adminRoles = ['Admin', 'Super Admin', 'Moderator'];
+  const defaultRedirect =
+    userInfo && userInfo.role && adminRoles.includes(userInfo.role)
+      ? '/admin'
+      : '/dashboard';
 
   return (
     <Container>
       <PageTransition routeKey={location.pathname}>
         <Routes location={location} key={location.pathname}>
-          {/* Redirect root to login */}
-          <Route path="/" element={<LoginScreen />} />
-          <Route path="/login" element={<LoginScreen />} />
-          <Route path="/register" element={<RegisterScreen />} />
+          {/* Redirect root and auth routes to the correct dashboard when already logged in */}
+          <Route
+            path="/"
+            element={userInfo ? <Navigate to={defaultRedirect} replace /> : <LoginScreen />}
+          />
+          <Route
+            path="/login"
+            element={userInfo ? <Navigate to={defaultRedirect} replace /> : <LoginScreen />}
+          />
+          <Route
+            path="/register"
+            element={userInfo ? <Navigate to={defaultRedirect} replace /> : <RegisterScreen />}
+          />
           <Route path="/exam/:id" element={<ExamDetailsScreen />} />
 
           {/* Private Routes */}
@@ -56,6 +74,7 @@ const AppRoutes = () => {
               <Route path="/admin/userlist" element={<UserListScreen />} />
               <Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
               <Route path="/admin/grouplist" element={<GroupListScreen />} />
+              <Route path="/admin/group/:id/view" element={<GroupDetailScreen />} />
               <Route path="/admin/group/create" element={<CreateGroupScreen />} />
               <Route path="/admin/group/:id/edit" element={<GroupEditScreen />} />
               <Route path="/admin/examlist" element={<ExamListScreen />} />
@@ -78,8 +97,21 @@ const AppRoutes = () => {
 };
 
 const AppShell = () => {
+  const dispatch = useDispatch();
+  const { userInfo } = useSelector((state) => state.user);
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
+
+  React.useEffect(() => {
+    if (
+      userInfo?.token &&
+      userInfo.role === 'Student' &&
+      !userInfo.admissionNumber
+    ) {
+      dispatch(refreshSessionUser());
+    }
+  }, [dispatch, userInfo]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {!isAdminPath && <Header />}

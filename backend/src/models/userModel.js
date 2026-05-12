@@ -34,6 +34,21 @@ const userSchema = mongoose.Schema(
         trim: true,
       },
     ],
+    classLevel: {
+      type: String,
+      enum: ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'],
+      uppercase: true,
+      trim: true,
+    },
+    department: {
+      type: String,
+      enum: ['General', 'Science', 'Art', 'Commercial'],
+      trim: true,
+    },
+    passportPhoto: {
+      type: String,
+      trim: true,
+    },
     isActive: {
       type: Boolean,
       default: true,

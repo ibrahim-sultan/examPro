@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Row, Col, Card, Button, Table, Form, Badge } from 'react-bootstrap';
+import { Row, Col, Button, Table, Badge } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
@@ -14,13 +14,8 @@ const StudentDashboardScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userInfo } = useSelector((state) => state.user);
+  const userToken = userInfo?.token;
   const submittedSuccess = location.state?.submitted;
-
-  const [allSubjects, setAllSubjects] = useState([]);
-  const [mySubjects, setMySubjects] = useState([]);
-  const [subjectsLoading, setSubjectsLoading] = useState(false);
-  const [subjectsError, setSubjectsError] = useState(null);
-  const [savingSubjects, setSavingSubjects] = useState(false);
 
   const [results, setResults] = useState([]);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -30,47 +25,31 @@ const StudentDashboardScreen = () => {
   const [examsLoading, setExamsLoading] = useState(false);
   const [examsError, setExamsError] = useState(null);
 
+  const onLogout = () => {
+    dispatch(logout());
+    navigate('/login', { replace: true });
+    window.location.reload();
+  };
+
   useEffect(() => {
-    if (!userInfo) {
+    if (!userToken) {
       navigate('/login');
       return;
     }
 
     const loadAllData = async () => {
-      setSubjectsLoading(true);
       setResultsLoading(true);
       setExamsLoading(true);
-      setSubjectsError(null);
       setResultsError(null);
       setExamsError(null);
 
       try {
-        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+        const config = { headers: { Authorization: `Bearer ${userToken}` } };
 
-        const [subjRes, mySubjRes, resultsRes, examsRes] = await Promise.allSettled([
-          axios.get(`${API_BASE_URL}/api/questions/subjects`, config),
-          axios.get(`${API_BASE_URL}/api/users/subjects`, config),
+        const [resultsRes, examsRes] = await Promise.allSettled([
           axios.get(`${API_BASE_URL}/api/results/my`, config),
           axios.get(`${API_BASE_URL}/api/exams/available`, config),
         ]);
-
-        // Handle subjects
-        if (subjRes.status === 'fulfilled') {
-          setAllSubjects(subjRes.value.data || []);
-        } else {
-          console.error('Failed to load subjects:', subjRes.reason);
-          setSubjectsError(subjRes.reason?.response?.data?.message || 'Failed to load subjects');
-        }
-
-        // Handle my subjects
-        if (mySubjRes.status === 'fulfilled') {
-          setMySubjects(mySubjRes.value.data || []);
-        } else {
-          console.error('Failed to load my subjects:', mySubjRes.reason);
-          if (!subjectsError) {
-            setSubjectsError(mySubjRes.reason?.response?.data?.message || 'Failed to load my subjects');
-          }
-        }
 
         // Handle results
         if (resultsRes.status === 'fulfilled') {
@@ -89,51 +68,14 @@ const StudentDashboardScreen = () => {
         }
       } catch (error) {
         console.error('Unexpected error in loadAllData:', error);
-        setSubjectsError('An unexpected error occurred');
       } finally {
-        setSubjectsLoading(false);
         setResultsLoading(false);
         setExamsLoading(false);
       }
     };
 
     loadAllData();
-  }, [userInfo, navigate]);
-
-  const onLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
-
-  const toggleSubject = (subject) => {
-    setMySubjects((prev) =>
-      prev.includes(subject)
-        ? prev.filter((s) => s !== subject)
-        : [...prev, subject]
-    );
-  };
-
-  const saveSubjects = async () => {
-    try {
-      setSavingSubjects(true);
-      setSubjectsError(null);
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-      await axios.put(
-        `${API_BASE_URL}/api/users/subjects`,
-        { subjects: mySubjects },
-        config
-      );
-    } catch (e) {
-      setSubjectsError(e.response?.data?.message || e.message);
-    } finally {
-      setSavingSubjects(false);
-    }
-  };
+  }, [userToken, navigate]);
 
   const completedExamIds = useMemo(
     () => new Set(results.filter((r) => r.status === 'Completed' && r.exam?._id).map((r) => r.exam._id)),
@@ -143,10 +85,22 @@ const StudentDashboardScreen = () => {
     () => availableExams.filter((exam) => !completedExamIds.has(exam._id)),
     [availableExams, completedExamIds]
   );
-  const completedExams = useMemo(() => results, [results]);
+  const completedExams = useMemo(() => {
+    // Deduplicate: keep only the most recent result per exam
+    const examMap = new Map();
+    results.forEach((result) => {
+      const examId = result.exam?._id;
+      if (examId) {
+        if (!examMap.has(examId) || new Date(result.createdAt) > new Date(examMap.get(examId).createdAt)) {
+          examMap.set(examId, result);
+        }
+      }
+    });
+    return Array.from(examMap.values());
+  }, [results]);
 
   // Early error fallback UI
-  if (examsError && !examsLoading && availableExams.length === 0 && !subjectsLoading && !resultsLoading) {
+  if (examsError && !examsLoading && availableExams.length === 0 && !resultsLoading) {
     return (
       <div>
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -164,70 +118,22 @@ const StudentDashboardScreen = () => {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h1 className="m-0">Student Dashboard</h1>
+        <div className="d-flex align-items-center gap-3">
+          <h1 className="m-0">Student Dashboard</h1>
+          {userInfo?.passportPhoto ? (
+            <img
+              src={`${API_BASE_URL}${userInfo.passportPhoto}`}
+              alt="Passport"
+              style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }}
+            />
+          ) : (
+            <Badge bg="warning" text="dark">No Passport</Badge>
+          )}
+        </div>
         <Button variant="outline-danger" onClick={onLogout}>
           Logout
         </Button>
       </div>
-
-      <Row className="mb-4">
-        <Col md={6}>
-          <Card>
-            <Card.Body>
-              <Card.Title>Registered Subjects</Card.Title>
-              {subjectsLoading ? (
-                <Loader />
-              ) : subjectsError ? (
-                <Message variant="danger">{subjectsError}</Message>
-              ) : mySubjects.length === 0 ? (
-                <div className="text-muted">You have not registered any subjects yet.</div>
-              ) : (
-                <div className="d-flex flex-wrap gap-2">
-                  {mySubjects.map((s) => (
-                    <span key={s} className="badge bg-primary">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card>
-            <Card.Body>
-              <Card.Title>Select Subjects</Card.Title>
-              {subjectsLoading ? (
-                <Loader />
-              ) : (
-                <>
-                  <div className="mb-2" style={{ maxHeight: 140, overflowY: 'auto' }}>
-                    {allSubjects.map((s) => (
-                      <Form.Check
-                        key={s}
-                        type="checkbox"
-                        id={`subj-${s}`}
-                        label={s}
-                        checked={mySubjects.includes(s)}
-                        onChange={() => toggleSubject(s)}
-                        className="mb-1"
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={saveSubjects}
-                    disabled={savingSubjects}
-                  >
-                    {savingSubjects ? 'Saving...' : 'Save Subjects'}
-                  </Button>
-                </>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
 
       {submittedSuccess && (
         <Row className="mb-3">

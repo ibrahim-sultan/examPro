@@ -8,6 +8,7 @@ import Loader from '../../components/Loader';
 import {
   listQuestions,
   deleteQuestion,
+  deleteQuestionsBulk,
   resetQuestionState,
 } from '../../store/slices/questionSlice';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +22,7 @@ const QuestionListScreen = () => {
   const { success: successDelete } = useSelector((state) => state.question);
 
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     dispatch(resetQuestionState());
@@ -35,6 +37,14 @@ const QuestionListScreen = () => {
   const deleteHandler = (id) => {
     if (window.confirm('Are you sure you want to delete this question?')) {
       dispatch(deleteQuestion(id));
+    }
+  };
+
+  const bulkDeleteHandler = () => {
+    if (!selectedIds.length) return;
+    if (window.confirm(`Delete ${selectedIds.length} selected question(s)?`)) {
+      dispatch(deleteQuestionsBulk(selectedIds));
+      setSelectedIds([]);
     }
   };
 
@@ -94,18 +104,44 @@ const QuestionListScreen = () => {
           <Table striped bordered hover responsive className="table-sm">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={questionsForSelected.length > 0 && selectedIds.length === questionsForSelected.length}
+                    onChange={(e) =>
+                      setSelectedIds(
+                        e.target.checked ? questionsForSelected.map((q) => q._id) : []
+                      )
+                    }
+                  />
+                </th>
                 <th>ID</th>
                 <th>QUESTION</th>
                 <th>SUBJECT</th>
+                <th>TYPE</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {questionsForSelected.map((question) => (
                 <tr key={question._id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(question._id)}
+                      onChange={(e) =>
+                        setSelectedIds((prev) =>
+                          e.target.checked
+                            ? [...new Set([...prev, question._id])]
+                            : prev.filter((id) => id !== question._id)
+                        )
+                      }
+                    />
+                  </td>
                   <td>{question._id}</td>
                   <td>{question.questionText || question.text}</td>
                   <td>{question.subject}</td>
+                  <td>{question.type}</td>
                   <td>
                     <LinkContainer to={`/admin/question/${question._id}/edit`}>
                       <Button variant="light" className="btn-sm me-2">
@@ -124,6 +160,14 @@ const QuestionListScreen = () => {
               ))}
             </tbody>
           </Table>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={!selectedIds.length}
+            onClick={bulkDeleteHandler}
+          >
+            Delete Selected ({selectedIds.length})
+          </Button>
         </>
       ) : (
         <Table striped bordered hover responsive className="table-sm">

@@ -2,25 +2,36 @@
 const Result = require('../models/resultModel');
 const Exam = require('../models/examModel');
 const Question = require('../models/questionModel');
+const Subject = require('../models/subjectModel');
 
-// @desc    Get all exams
-// @route   GET /api/exams
-// @access  Private
+const ALLOWED_CLASS_LEVELS = ['JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3'];
+const ALLOWED_DEPARTMENTS = ['General', 'Science', 'Art', 'Commercial'];
+
+const normalizeValue = (value) => String(value || '').trim();
+const normalizeDepartment = (value) => {
+  const department = normalizeValue(value);
+  if (/^commercial$/i.test(department)) return 'Commercial';
+  return department;
+};
+const isValidClassDepartment = (classLevel, department) => {
+  const level = normalizeValue(classLevel).toUpperCase();
+  const dept = normalizeDepartment(department);
+  if (!ALLOWED_CLASS_LEVELS.includes(level) || !ALLOWED_DEPARTMENTS.includes(dept)) return false;
+  if (level.startsWith('JSS')) return dept === 'General';
+  if (level.startsWith('SS')) return ['Science', 'Art', 'Commercial'].includes(dept);
+  return false;
+};
+
 const getExams = async (req, res) => {
   try {
     const query = {};
-    // For now, show all exams to students; time and access control are handled on the client.
-    // If you later want to hide archived exams, you can change this to filter by status.
-    const exams = await Exam.find(query).select('-questions'); // Don't send questions in list view
+    const exams = await Exam.find(query).select('-questions');
     res.json(exams);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
 };
 
-// @desc    Get single exam by ID
-// @route   GET /api/exams/:id
-// @access  Private
 const getExamById = async (req, res) => {
   try {
     const exam = await Exam.findById(req.params.id);
@@ -29,28 +40,35 @@ const getExamById = async (req, res) => {
       return res.status(404).json({ message: 'Exam not found' });
     }
 
-    // Students can only view published exams
     if (req.user.role === 'Student' && exam.status !== 'Published') {
       return res.status(403).json({ message: 'Not authorized to view this exam' });
     }
 
-    // For students, we might not want to send all details before they start
     if (req.user.role === 'Student') {
-        const examDetailsForStudent = {
-            _id: exam._id,
-            title: exam.title,
-            description: exam.description,
-            subject: exam.subject,
-            duration: exam.duration,
-            startTime: exam.startTime,
-            endTime: exam.endTime,
-            questionCount: exam.questions.length
-        };
-       return res.json(examDetailsForStudent);
+      if (exam.classLevel && exam.department) {
+        if (
+          normalizeValue(req.user.classLevel).toUpperCase() !== normalizeValue(exam.classLevel).toUpperCase() ||
+          normalizeDepartment(req.user.department) !== normalizeDepartment(exam.department)
+        ) {
+          return res.status(403).json({ message: 'Not authorized to view this exam' });
+        }
+      }
+
+      const examDetailsForStudent = {
+        _id: exam._id,
+        title: exam.title,
+        description: exam.description,
+        subject: exam.subject,
+        duration: exam.duration,
+        startTime: exam.startTime,
+        endTime: exam.endTime,
+        questionCount: exam.questions.length,
+        classLevel: exam.classLevel,
+        department: exam.department,
+      };
+      return res.json(examDetailsForStudent);
     }
 
-
-    // Admin gets full details
     await exam.populate('questions');
     res.json(exam);
   } catch (error) {
@@ -58,46 +76,74 @@ const getExamById = async (req, res) => {
   }
 };
 
-// @desc    Create an exam
-// @route   POST /api/exams
-// @access  Private/Admin
 const createExam = async (req, res) => {
   try {
     const {
       title,
       description,
       subject,
+      classLevel,
+      department,
       duration,
       startTime,
       endTime,
       markingScheme,
       randomizeQuestions,
-      questionCount, // Number of questions to add
+      passportRequired,
+      questionCount,
       assignedGroups,
-      status, // Draft | Published | Archived
+      status,
     } = req.body;
 
-    // Fetch random questions from the bank for the given subject
-    const questions = await Question.aggregate([
-      { $match: { subject: subject } },
-      { $sample: { size: Number(questionCount) || 10 } }, // Default to 10 questions if not specified
-    ]);
-
-    if (questions.length < questionCount) {
-        return res.status(400).json({ message: `Not enough questions in the bank for the subject '${subject}'. Found only ${questions.length}.` });
+    if ((classLevel && !department) || (!classLevel && department)) {
+      return res.status(400).json({ message: 'Both classLevel and department must be provided together' });
     }
 
-    const questionIds = questions.map(q => q._id);
+    if (classLevel && department && !isValidClassDepartment(classLevel, department)) {
+      return res.status(400).json({ message: 'Invalid classLevel or department for this exam' });
+    }
+
+    // Auto-create subject if it doesn't exist
+    if (subject && subject.trim()) {
+      const normalizedSubject = subject.trim().toLowerCase();
+      let subjectDoc = await Subject.findOne({ name: normalizedSubject });
+      if (!subjectDoc) {
+        subjectDoc = await Subject.create({
+          name: normalizedSubject,
+          displayName: subject.trim(),
+          createdBy: req.user._id,
+        });
+      }
+    }
+
+    const match = { subject };
+    if (classLevel) match.classLevel = normalizeValue(classLevel).toUpperCase();
+    if (department) match.department = normalizeDepartment(department);
+
+    const desiredCount = Number(questionCount) || 10;
+    const questions = await Question.aggregate([
+      { $match: match },
+      { $sample: { size: desiredCount } },
+    ]);
+
+    if (questions.length < desiredCount) {
+      return res.status(400).json({ message: `Not enough questions in the bank for the selected filters. Found only ${questions.length}.` });
+    }
+
+    const questionIds = questions.map((q) => q._id);
 
     const exam = new Exam({
       title,
       description,
       subject,
+      classLevel: classLevel ? normalizeValue(classLevel).toUpperCase() : undefined,
+      department: department ? normalizeDepartment(department) : undefined,
       duration,
       startTime,
       endTime,
       markingScheme,
       randomizeQuestions,
+      passportRequired: !!passportRequired,
       questions: questionIds,
       createdBy: req.user._id,
       assignedGroups,
@@ -162,17 +208,31 @@ const getAvailableExams = async (req, res) => {
       ? student.groups 
       : [];
     
-    // Build query filter
+    const studentClassLevel = normalizeValue(student.classLevel).toUpperCase();
+    const studentDepartment = normalizeValue(student.department);
+    const studentSubjects = Array.isArray(student.subjects)
+      ? student.subjects.map((s) => normalizeValue(s).toLowerCase()).filter(Boolean)
+      : [];
+
     const orConditions = [
       { assignedGroups: { $exists: false } },
       { assignedGroups: { $size: 0 } },
     ];
-    
+
     if (studentGroups.length > 0) {
       orConditions.push({ assignedGroups: { $in: studentGroups } });
     }
 
-    // Use separate queries for better performance
+    const classDepartmentFilter = {
+      $or: [
+        { classLevel: { $exists: false } },
+        { classLevel: '' },
+        { department: { $exists: false } },
+        { department: '' },
+        { classLevel: studentClassLevel, department: studentDepartment },
+      ],
+    };
+
     const [completedResults, exams] = await Promise.all([
       Result.find({ user: student._id, status: 'Completed' }).select('exam').lean(),
       Exam.find({
@@ -180,11 +240,16 @@ const getAvailableExams = async (req, res) => {
         startTime: { $lte: now },
         endTime: { $gte: now },
         $or: orConditions,
-      }).select('-questions -markingScheme -createdBy').lean()
+        ...classDepartmentFilter,
+      }).select('-questions -markingScheme -createdBy').lean(),
     ]);
 
     const completedExamIds = new Set(completedResults.map((result) => result.exam.toString()));
-    const availableExams = exams.filter(exam => !completedExamIds.has(exam._id.toString()));
+    const availableExams = exams.filter((exam) => {
+      if (completedExamIds.has(exam._id.toString())) return false;
+      if (!studentSubjects.length) return true;
+      return studentSubjects.includes(normalizeValue(exam.subject).toLowerCase());
+    });
 
     res.json(availableExams);
   } catch (error) {

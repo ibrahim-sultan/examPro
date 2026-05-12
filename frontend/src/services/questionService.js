@@ -1,7 +1,10 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://exampro-ysox.onrender.com'
+    : 'http://localhost:5000');
 const API_URL = `${API_BASE_URL}/api/questions/`;
 
 // Get all questions
@@ -40,6 +43,17 @@ const deleteQuestion = async (questionId, token) => {
   return questionId;
 };
 
+const deleteQuestionsBulk = async (ids, token) => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const { data } = await axios.post(`${API_URL}bulk-delete`, { ids }, config);
+  return data;
+};
+
 // Get question details
 const getQuestionDetails = async (questionId, token) => {
   const config = {
@@ -72,6 +86,7 @@ const questionService = {
   listQuestions,
   createQuestion,
   deleteQuestion,
+  deleteQuestionsBulk,
   getQuestionDetails,
   updateQuestion,
 };
